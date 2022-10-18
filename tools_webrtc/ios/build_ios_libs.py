@@ -155,6 +155,8 @@ def BuildWebRTC(output_dir, target_environment, target_arch, flavor,
       'ios_enable_code_signing=false',
       'is_component_build=false',
       'rtc_include_tests=false',
+      'use_rtti=true',
+      'use_custom_libcxx=false',
   ]
 
   # Add flavor option.
@@ -221,7 +223,7 @@ def main():
     _CleanTemporary(args.output_dir, list(architectures.keys()))
     return 0
 
-  gn_target_name = 'framework_objc'
+  gn_target_name = 'framework_objc_static'
   gn_args.append('enable_dsyms=true')
   gn_args.append('enable_stripping=true')
 
@@ -239,6 +241,8 @@ def main():
                   gn_target_name, IOS_DEPLOYMENT_TARGET[environment],
                   LIBVPX_BUILD_VP9, args.use_goma, gn_args)
     all_lib_paths.extend(lib_paths)
+    # Return early - we do not need the framework, just static libs
+    continue
 
     # Combine the slices.
     dylib_path = os.path.join(SDK_FRAMEWORK_NAME, 'WebRTC')
@@ -306,6 +310,7 @@ def main():
       _RunCommand(cmd)
       _RunCommand(['plutil', '-convert', 'binary1', infoplist_path])
 
+  return 0 # return early, we only need static lib
   xcframework_dir = os.path.join(args.output_dir, SDK_XCFRAMEWORK_NAME)
   if os.path.isdir(xcframework_dir):
     shutil.rmtree(xcframework_dir)
