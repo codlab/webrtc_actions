@@ -4,12 +4,12 @@ stages:
 
 # Define pipeline env variables.
 variables:
-  GIT_STRATEGY: "none"
-  GIT_CHECKOUT: "false"
+  GIT_STRATEGY: "fetch"
+  GIT_CHECKOUT: "true"
 
   META_FILE: "package.info"
   ENV_FILE: "build.env"
-  WEBRTC_IOS: "/opt/googlesource/webrtc_ios/branch-heads/<number>" # fullfil proper revision. E.g. number=5195
+  WEBRTC_IOS: "/opt/googlesource/webrtc_ios/branch-heads/5195" # fullfil proper revision. E.g. number=5195
   WEBRTC_WIN: "C:\\googlesource\\webrtc\\branch-heads\\<number>"
 
 # Define gitlab runners on local build servers.
@@ -26,16 +26,16 @@ variables:
   - echo "Checking if package was built is not ready yet..."
 
 .setup_webrtc_repository: &setup_webrtc_repository
-  - export PATH="${PATH}:${CI_PROJECT_DIR}/depot_tools"
-  - if [[ -d ${WEBRTC_IOS} ]]; then echo "Getting fresh repository from local cache ${WEBRTC_LOCAL_CACHE}/src/"; else exit 1; fi
-  - mkdir ${CI_PROJECT_DIR}/src/ && rsync -aS ${WEBRTC_LOCAL_CACHE}/src/. ${CI_PROJECT_DIR}/src/. && cp ${WEBRTC_LOCAL_CACHE}/.gclient* ${CI_PROJECT_DIR}/
+  - cd ${CI_PROJECT_DIR} && git clean -ffdx
+  - export PATH="${PATH}:/opt/googlesource/depot_tools"
+  - if [[ -d ${WEBRTC_IOS} ]]; then echo "Getting fresh repository from local cache ${WEBRTC_IOS}"; else exit 1; fi
+  - mkdir ${CI_PROJECT_DIR}/src/ && rsync -aS ${WEBRTC_IOS}/. ${CI_PROJECT_DIR}/src/. && cp ${WEBRTC_IOS}/../../.gclient* ${CI_PROJECT_DIR}/
   - cd ${CI_PROJECT_DIR}/src
   - export GIT_SSH_COMMAND='ssh -i $GIT_SSH_PRIVATE_KEY_PATH'
   - git remote add dolby git@gitlab-sfo.dolby.net:voxeet/cpp/webrtc.git
   - sshpass -p $GIT_SSH_PRIVATE_KEY_PASSPHRASE -P passphrase git fetch --all
   - git checkout ${CI_COMMIT_SHA}
   - cd ${CI_PROJECT_DIR} && time gclient sync -D
-  - cp ${CI_PROJECT_DIR}/build_config_cpp_cpp.gni ${CI_PROJECT_DIR}/src/build/config/c++/c++.gni
 
 # Run code before_script
 .before_script_local_build_hosts: &before_script_local_build_hosts
@@ -45,8 +45,6 @@ variables:
 
 .ios_build:
   stage: build-and-deploy
-  variables:
-    WEBRTC_LOCAL_CACHE: "/opt/googlesource/webrtc_ios" # ${WEBRTC_IOS}
   extends:
     - .capi_ios_runner_tags
     - .before_script_local_build_hosts
