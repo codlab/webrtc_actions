@@ -50,11 +50,36 @@ variables:
     - .before_script_local_build_hosts
 
   script:
-    - echo "Building iOS..."
-    - echo "Done."
-    - echo "Deploy"
+   - if [[ $CI_JOB_NAME == *"debug"* ]] ; then export EXTRA_ARGS="--build_config debug --extra-gn-args symbol_level=2" ; fi
+   - ${CI_PROJECT_DIR}/src/tools_webrtc/ios/build_ios_libs.py ${EXTRA_ARGS}
+   - ${CI_PROJECT_DIR}/cicd/create_meta_file.sh
+   - source ${CI_PROJECT_DIR}/${ENV_FILE}
+   # create zip package
+   - pushd ${CI_PROJECT_DIR}
+   - find src | grep '\.hpp'$                     > src/out/zip_file_list.txt
+   - find src | grep '\.hxx'$                    >> src/out/zip_file_list.txt
+   - find src | grep '\.h'$                      >> src/out/zip_file_list.txt
+   - find src/out_ios_libs | grep '\.a'$         >> src/out/zip_file_list.txt
+   - echo ${META_FILE}                           >> src/out/zip_file_list.txt
+   - cat src/out/zip_file_list.txt | zip -yq -1 --names-stdin ${ARTIFACT_ZIP_PACKAGE}
+   - popd
+   - aws s3 cp --quiet ${ARTIFACT_ZIP_PACKAGE} "${VOX_WEBRTC_S3_ROOT_URL}/ios/snapshots/" || echo "Error uploading ${ARTIFACT_ZIP_PACKAGE} on ${IOS_WEBRTC_S3_PREBUILTS} is done."
+   - aws s3 ls "${VOX_WEBRTC_S3_ROOT_URL}/ios/snapshots/"
+   - echo -e "Package link \n https://vox-webrtc.s3.amazonaws.com/ios/snapshots/${ARTIFACT_ZIP_PACKAGE}"
 
-build:ios:
-  when: manual
+iOS_MR_test:
+  stage: build
+  only: ['merge_requests']
+  extends:
+    - .capi_ios_runner_tags
+    - .before_script_local_build_hosts
+  script:
+    - time ${CI_PROJECT_DIR}/src/tools_webrtc/ios/build_ios_libs.py
+
+ios_release:
+  extends:
+    - .ios_build
+
+ios_debug:
   extends:
     - .ios_build
