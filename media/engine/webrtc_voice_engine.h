@@ -43,7 +43,7 @@ class WebRtcVoiceMediaChannel;
 
 // WebRtcVoiceEngine is a class to be used with CompositeMediaEngine.
 // It uses the WebRtc VoiceEngine library for audio handling.
-class WebRtcVoiceEngine final : public VoiceEngineInterface {
+class WebRtcVoiceEngine : public VoiceEngineInterface {
   friend class WebRtcVoiceMediaChannel;
 
  public:
@@ -87,7 +87,7 @@ class WebRtcVoiceEngine final : public VoiceEngineInterface {
   // Stops AEC dump.
   void StopAecDump() override;
 
- private:
+ protected:
   // Every option that is "set" will be applied. Every option not "set" will be
   // ignored. This allows us to selectively turn on and off different options
   // easily at any time.
@@ -134,7 +134,7 @@ class WebRtcVoiceEngine final : public VoiceEngineInterface {
 
 // WebRtcVoiceMediaChannel is an implementation of VoiceMediaChannel that uses
 // WebRtc Voice Engine.
-class WebRtcVoiceMediaChannel final : public VoiceMediaChannel,
+class WebRtcVoiceMediaChannel : public VoiceMediaChannel,
                                       public webrtc::Transport {
  public:
   WebRtcVoiceMediaChannel(WebRtcVoiceEngine* engine,

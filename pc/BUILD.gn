@@ -1453,6 +1453,15 @@ rtc_library("media_stream_observer") {
   ]
   absl_deps = [ "//third_party/abseil-cpp/absl/algorithm:container" ]
 }
+  rtc_source_set("fake_audio_capture_module") {
+    visibility = [ "*" ]
+    allow_poison = [ "audio_codecs" ]
+    sources = [
+      "test/fake_audio_capture_module.cc",
+      "test/fake_audio_capture_module.h",
+    ]
+  }
+  
 rtc_source_set("peer_connection_factory") {
   # TODO(bugs.webrtc.org/13661): Reduce visibility if possible
   visibility = [ "*" ]  # Known to be used externally

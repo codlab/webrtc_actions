@@ -69,6 +69,7 @@ rtc_library("audio") {
     "../call:rtp_interfaces",
     "../common_audio",
     "../common_audio:common_audio_c",
+    "../dvc:dvc_media",
     "../logging:rtc_event_audio",
     "../logging:rtc_stream_config",
     "../modules/async_audio_processing",

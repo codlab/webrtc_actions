@@ -30,6 +30,9 @@ class ObjCVideoTrackSource : public rtc::AdaptedVideoTrackSource {
   explicit ObjCVideoTrackSource(bool is_screencast);
   explicit ObjCVideoTrackSource(RTCObjCVideoSourceAdapter* adapter);
 
+  ObjCVideoTrackSource(const ObjCVideoTrackSource&) = delete;
+  ObjCVideoTrackSource& operator=(const ObjCVideoTrackSource&) = delete;
+
   bool is_screencast() const override;
 
   // Indicates that the encoder should denoise video before encoding it.
@@ -47,6 +50,7 @@ class ObjCVideoTrackSource : public rtc::AdaptedVideoTrackSource {
   void OnOutputFormatRequest(int width, int height, int fps);
 
  private:
+  
   rtc::VideoBroadcaster broadcaster_;
   rtc::TimestampAligner timestamp_aligner_;
 
