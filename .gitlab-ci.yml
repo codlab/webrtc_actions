@@ -9,8 +9,11 @@ variables:
 
   META_FILE: "package.info"
   ENV_FILE: "build.env"
+
   WEBRTC_IOS: "/opt/googlesource/webrtc_ios/branch-heads/5195" # fullfil proper revision. E.g. number=5195
   WEBRTC_WIN: "C:\\googlesource\\webrtc\\branch-heads\\<number>"
+
+  VOX_WEBRTC_S3_ROOT_URL: "s3://vox-webrtc"
 
 # Define gitlab runners on local build servers.
 .capi_ios_runner_tags:
@@ -20,18 +23,23 @@ variables:
     - ios
   timeout: 3h
 
+.capi_macos_runner_tags:
+  tags:
+    - wro-osx
+    - webrtc
+    - mac64
+  timeout: 3h
+
 .check_if_package_was_built: &check_if_package_was_built
   - export AWS_ACCESS_KEY_ID="${AWS_ACCESS_KEY_ID_PROD}"
   - export AWS_SECRET_ACCESS_KEY="${AWS_SECRET_ACCESS_KEY_PROD}"
-  - echo "Checking if package was built is not ready yet..."
+  - ${CI_PROJECT_DIR}/cicd/s3_package_finder.sh || exit 0 # If package exists on S3, finish job.
 
 .setup_webrtc_repository: &setup_webrtc_repository
-  - cd ${CI_PROJECT_DIR} && git clean -ffdx
   - export PATH="${PATH}:/opt/googlesource/depot_tools"
   - if [[ -d ${WEBRTC_IOS} ]]; then echo "Getting fresh repository from local cache ${WEBRTC_IOS}"; else exit 1; fi
   - mkdir ${CI_PROJECT_DIR}/src/ && rsync -aS ${WEBRTC_IOS}/. ${CI_PROJECT_DIR}/src/. && cp ${WEBRTC_IOS}/../../.gclient* ${CI_PROJECT_DIR}/
   - cd ${CI_PROJECT_DIR}/src
-  - export GIT_SSH_COMMAND='ssh -i $GIT_SSH_PRIVATE_KEY_PATH'
   - git remote add dolby git@gitlab-sfo.dolby.net:voxeet/cpp/webrtc.git
   - sshpass -p $GIT_SSH_PRIVATE_KEY_PASSPHRASE -P passphrase git fetch --all
   - git checkout ${CI_COMMIT_SHA}
@@ -45,6 +53,9 @@ variables:
 
 .ios_build:
   stage: build-and-deploy
+  except:
+    refs:
+    - merge_requests
   extends:
     - .capi_ios_runner_tags
     - .before_script_local_build_hosts
@@ -64,8 +75,39 @@ variables:
    - cat src/out/zip_file_list.txt | zip -yq -1 --names-stdin ${ARTIFACT_ZIP_PACKAGE}
    - popd
    - aws s3 cp --quiet ${ARTIFACT_ZIP_PACKAGE} "${VOX_WEBRTC_S3_ROOT_URL}/ios/snapshots/" || echo "Error uploading ${ARTIFACT_ZIP_PACKAGE} on ${IOS_WEBRTC_S3_PREBUILTS} is done."
-   - aws s3 ls "${VOX_WEBRTC_S3_ROOT_URL}/ios/snapshots/"
    - echo -e "Package link \n https://vox-webrtc.s3.amazonaws.com/ios/snapshots/${ARTIFACT_ZIP_PACKAGE}"
+
+# .macos64_build:
+#   stage: build-and-deploy
+#   except:
+#     refs:
+#     - merge_requests
+#   extends:
+  #   - .capi_macos_runner_tags
+  #   - .build_before_script_mac_hw
+  # script:
+  #   - source ${CI_PROJECT_DIR}/skip_build
+  #   - |
+  #     if [ $skip_build = "true" ]; then
+  #         echo "skipping building - value of skip_build is $skip_build"
+  #         exit 0
+  #     fi
+  #   - bash ${CI_PROJECT_DIR}/cicd/build_webrtc_macos64.sh
+  #   - ${CI_PROJECT_DIR}/cicd/create_meta_file.sh
+  #   - source ${CI_PROJECT_DIR}/${ENV_FILE}
+  #   # create zip package: only headers and static libs are needed for Linux:
+  #   - pushd ${CI_PROJECT_DIR}
+  #   - find src | grep '\.hpp'$                     > src/out/zip_file_list.txt
+  #   - find src | grep '\.hxx'$                    >> src/out/zip_file_list.txt
+  #   - find src | grep '\.h'$                      >> src/out/zip_file_list.txt
+  #   - find src/out | grep '\.a'$                  >> src/out/zip_file_list.txt
+  #   - echo ${META_FILE}                           >> src/out/zip_file_list.txt
+  #   - find src/out | grep 'webrtc_licenses.html'$ >> src/out/zip_file_list.txt
+  #   - cat src/out/zip_file_list.txt | zip -yq -1 --names-stdin ${ARTIFACT_ZIP_PACKAGE}
+  #   - popd
+  #   - aws s3 cp --quiet ${ARTIFACT_ZIP_PACKAGE} "${VOX_WEBRTC_S3_ROOT_URL}/macos64/snapshots/" || echo "Error uploading ${ARTIFACT_ZIP_PACKAGE} on ${VOX_WEBRTC_S3_ROOT_URL}/macos64/snapshots/."
+  #   - aws s3 ls "${VOX_WEBRTC_S3_ROOT_URL}/macos64/snapshots/"
+  #   - echo -e "Package link \n https://vox-webrtc.s3.amazonaws.com/macos64/snapshots/${ARTIFACT_ZIP_PACKAGE}"
 
 iOS_MR_test:
   stage: build
@@ -83,3 +125,20 @@ ios_release:
 ios_debug:
   extends:
     - .ios_build
+
+# MacOS64_MR_test:
+#   stage: build
+#   only: ['merge_requests']
+#   extends:
+#     - .capi_macos_runner_tags
+#     - .before_script_local_build_hosts
+#   script:
+#     - time ${CI_PROJECT_DIR}/src/tools_webrtc/ios/build_ios_libs.py
+#
+# macos64_release:
+#   extends:
+#     - .macos64_build
+#
+# macos64_debug:
+#   extends:
+#     - .macos64_build
