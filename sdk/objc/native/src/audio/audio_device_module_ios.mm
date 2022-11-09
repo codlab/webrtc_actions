@@ -20,6 +20,7 @@
 
 #if defined(WEBRTC_IOS)
 #include "audio_device_ios.h"
+#include "sdk/objc/native/api/audio_device_module.h"
 #endif
 
 #define CHECKinitialized_() \
@@ -39,9 +40,11 @@
 namespace webrtc {
 namespace ios_adm {
 
-AudioDeviceModuleIOS::AudioDeviceModuleIOS(bool bypass_voice_processing)
+AudioDeviceModuleIOS::AudioDeviceModuleIOS(rtc::scoped_refptr<AudioForwarder> forwarder,
+                                           bool bypass_voice_processing)
     : bypass_voice_processing_(bypass_voice_processing),
-      task_queue_factory_(CreateDefaultTaskQueueFactory()) {
+      task_queue_factory_(CreateDefaultTaskQueueFactory()),
+      audio_forwarder_(forwarder) {
   RTC_LOG(LS_INFO) << "current platform is IOS";
   RTC_LOG(LS_INFO) << "iPhone Audio APIs will be utilized.";
 }
@@ -50,6 +53,12 @@ AudioDeviceModuleIOS::AudioDeviceModuleIOS(bool bypass_voice_processing)
     RTC_DLOG(LS_INFO) << __FUNCTION__;
     audio_device_->AttachAudioBuffer(audio_device_buffer_.get());
     return 0;
+  }
+
+  void AudioDeviceModuleIOS::AttachAudioForwarder() {
+    RTC_LOG(LS_INFO) << __FUNCTION__;
+    RTC_DCHECK(audio_device_);
+    audio_device_->AttachAudioForwarder(audio_forwarder_);
   }
 
   AudioDeviceModuleIOS::~AudioDeviceModuleIOS() {
@@ -76,6 +85,7 @@ AudioDeviceModuleIOS::AudioDeviceModuleIOS(bool bypass_voice_processing)
     RTC_CHECK(audio_device_);
 
     this->AttachAudioBuffer();
+    AttachAudioForwarder();
 
     AudioDeviceGeneric::InitStatus status = audio_device_->Init();
     RTC_HISTOGRAM_ENUMERATION(

@@ -61,7 +61,7 @@
 
 - (rtc::scoped_refptr<webrtc::AudioDeviceModule>)audioDeviceModule {
 #if defined(WEBRTC_IOS)
-  return webrtc::CreateAudioDeviceModule();
+  return webrtc::CreateAudioDeviceModule(nullptr);
 #else
   return nullptr;
 #endif

@@ -28,6 +28,7 @@ RTC_FWD_DECL_OBJC_CLASS(RTCNativeAudioSessionDelegateAdapter);
 namespace webrtc {
 
 class FineAudioBuffer;
+class AudioForwarder;
 
 namespace ios_adm {
 
@@ -53,6 +54,8 @@ class AudioDeviceIOS : public AudioDeviceGeneric,
   ~AudioDeviceIOS() override;
 
   void AttachAudioBuffer(AudioDeviceBuffer* audioBuffer) override;
+
+  void AttachAudioForwarder(rtc::scoped_refptr<AudioForwarder>);
 
   InitStatus Init() override;
   int32_t Terminate() override;
@@ -301,6 +304,8 @@ class AudioDeviceIOS : public AudioDeviceGeneric,
 
   // Contains the time for when the last output volume change was detected.
   int64_t last_output_volume_change_time_ RTC_GUARDED_BY(thread_checker_);
+
+  rtc::scoped_refptr<AudioForwarder> audio_forwarder_;
 };
 }  // namespace ios_adm
 }  // namespace webrtc

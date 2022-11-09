@@ -23,6 +23,7 @@
 namespace webrtc {
 
 class AudioDeviceGeneric;
+class AudioForwarder;
 
 namespace ios_adm {
 
@@ -30,7 +31,8 @@ class AudioDeviceModuleIOS : public AudioDeviceModule {
  public:
   int32_t AttachAudioBuffer();
 
-  explicit AudioDeviceModuleIOS(bool bypass_voice_processing);
+  explicit AudioDeviceModuleIOS(rtc::scoped_refptr<AudioForwarder>,
+                                bool bypass_voice_processing);
   ~AudioDeviceModuleIOS() override;
 
   // Retrieve the currently utilized audio layer
@@ -131,11 +133,13 @@ class AudioDeviceModuleIOS : public AudioDeviceModule {
   int GetRecordAudioParameters(AudioParameters* params) const override;
 #endif  // WEBRTC_IOS
  private:
+  void AttachAudioForwarder();
   const bool bypass_voice_processing_;
   bool initialized_ = false;
   const std::unique_ptr<TaskQueueFactory> task_queue_factory_;
   std::unique_ptr<AudioDeviceIOS> audio_device_;
   std::unique_ptr<AudioDeviceBuffer> audio_device_buffer_;
+  rtc::scoped_refptr<AudioForwarder> audio_forwarder_;
 };
 }  // namespace ios_adm
 }  // namespace webrtc

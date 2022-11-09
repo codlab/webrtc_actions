@@ -25,6 +25,7 @@
 #include "rtc_base/time_utils.h"
 #include "system_wrappers/include/field_trial.h"
 #include "system_wrappers/include/metrics.h"
+#include "sdk/objc/native/api/audio_device_module.h"
 
 #import "base/RTCLogging.h"
 #import "components/audio/RTCAudioSession+Private.h"
@@ -134,6 +135,18 @@ void AudioDeviceIOS::AttachAudioBuffer(AudioDeviceBuffer* audioBuffer) {
   RTC_DCHECK(audioBuffer);
   RTC_DCHECK(thread_checker_.IsCurrent());
   audio_device_buffer_ = audioBuffer;
+}
+
+void AudioDeviceIOS::AttachAudioForwarder(rtc::scoped_refptr<AudioForwarder> forwarder) {
+  RTC_DCHECK(thread_checker_.IsCurrent());
+  if (recording_.load())
+  {
+    //"Cannot attach AudioForwarder when Voice-Processing I/O audio unit is started"
+    RTC_DCHECK_NOTREACHED();
+    return;
+  }
+  LOGI() << "AttachAudioForwarder";
+  audio_forwarder_ = forwarder;
 }
 
 AudioDeviceGeneric::InitStatus AudioDeviceIOS::Init() {
@@ -417,6 +430,10 @@ OSStatus AudioDeviceIOS::OnDeliverRecordedData(AudioUnitRenderActionFlags* flags
   // Use the FineAudioBuffer instance to convert between native buffer size
   // and the 10ms buffer size used by WebRTC.
   fine_audio_buffer_->DeliverRecordedData(record_audio_buffer_, kFixedRecordDelayEstimate);
+  if(audio_forwarder_) {
+    AudioSamples samples = { record_parameters_.sample_rate(), &audio_buffer_list };
+    audio_forwarder_->OnDeliverRecordedData(samples);
+  }
   return noErr;
 }
 
