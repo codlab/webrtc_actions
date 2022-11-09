@@ -87,12 +87,6 @@ void DoNothingEncoderAdapter::OnReceivedUplinkPacketLossFraction(
   _encoder->OnReceivedUplinkPacketLossFraction(uplink_packet_loss_fraction);
 }
 
-//void DoNothingEncoderAdapter::OnReceivedUplinkRecoverablePacketLossFraction(
-//    float uplink_recoverable_packet_loss_fraction) {
-//  _encoder->OnReceivedUplinkRecoverablePacketLossFraction(
-//      uplink_recoverable_packet_loss_fraction);
-//}
-
 void DoNothingEncoderAdapter::OnReceivedTargetAudioBitrate(int target_bps) {
   _encoder->OnReceivedTargetAudioBitrate(target_bps);
 }
