@@ -1353,6 +1353,8 @@ class PeerConnectionObserver {
   // The heuristics for defining what constitutes "interesting" are
   // implementation-defined.
   virtual void OnInterestingUsage(int usage_pattern) {}
+
+  virtual void OnDvcError(const std::string& error_reason) {}
 };
 
 // PeerConnectionDependencies holds all of PeerConnections dependencies.

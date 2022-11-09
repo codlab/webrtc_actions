@@ -117,6 +117,11 @@ class WebRtcSessionDescriptionFactory : public rtc::MessageHandler,
     session_desc_factory_.set_is_unified_plan(is_unified_plan);
   }
 
+  void set_audio_codecs(const cricket::AudioCodecs& send_codecs,
+                        const cricket::AudioCodecs& recv_codecs);
+  void get_audio_codecs(cricket::AudioCodecs& send_codecs,
+                        cricket::AudioCodecs& recv_codecs);
+
   // For testing.
   bool waiting_for_certificate_for_testing() const {
     return certificate_request_state_ == CERTIFICATE_WAITING;

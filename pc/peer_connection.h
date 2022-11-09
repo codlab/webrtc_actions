@@ -459,10 +459,14 @@ class PeerConnection : public PeerConnectionInternal,
 
   ~PeerConnection() override;
 
- private:
-  RTCError Initialize(
+  virtual RTCError Initialize(
       const PeerConnectionInterface::RTCConfiguration& configuration,
       PeerConnectionDependencies dependencies);
+
+ // The machinery for handling offers and answers. Const after initialization.
+  std::unique_ptr<SdpOfferAnswerHandler> sdp_handler_
+      RTC_GUARDED_BY(signaling_thread()) RTC_PT_GUARDED_BY(signaling_thread());
+ private:
   JsepTransportController* InitializeTransportController_n(
       const RTCConfiguration& configuration,
       const PeerConnectionDependencies& dependencies)
@@ -684,10 +688,6 @@ class PeerConnection : public PeerConnectionInternal,
   absl::optional<std::string> sctp_mid_s_ RTC_GUARDED_BY(signaling_thread());
   absl::optional<std::string> sctp_mid_n_ RTC_GUARDED_BY(network_thread());
   std::string sctp_transport_name_s_ RTC_GUARDED_BY(signaling_thread());
-
-  // The machinery for handling offers and answers. Const after initialization.
-  std::unique_ptr<SdpOfferAnswerHandler> sdp_handler_
-      RTC_GUARDED_BY(signaling_thread()) RTC_PT_GUARDED_BY(signaling_thread());
 
   const bool dtls_enabled_;
 

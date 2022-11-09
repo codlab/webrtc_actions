@@ -91,7 +91,7 @@ class SdpOfferAnswerHandler : public SdpStateProvider {
     RTC_DCHECK_RUN_ON(signaling_thread());
     webrtc_session_desc_factory_.reset();
   }
-  const WebRtcSessionDescriptionFactory* webrtc_session_desc_factory() const {
+  WebRtcSessionDescriptionFactory* webrtc_session_desc_factory() const {
     RTC_DCHECK_RUN_ON(signaling_thread());
     return webrtc_session_desc_factory_.get();
   }

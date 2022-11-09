@@ -380,6 +380,13 @@ class VoiceChannel : public BaseChannel {
     return cricket::MEDIA_TYPE_AUDIO;
   }
 
+  // Last AudioSendParameters sent down to the media_channel() via
+  // SetSendParameters.
+  AudioSendParameters last_send_params_ RTC_GUARDED_BY(worker_thread());
+  // Last AudioRecvParameters sent down to the media_channel() via
+  // SetRecvParameters.
+  AudioRecvParameters last_recv_params_ RTC_GUARDED_BY(worker_thread());
+
  private:
   // overrides from BaseChannel
   void UpdateMediaSendRecvState_w() RTC_RUN_ON(worker_thread()) override;
@@ -391,13 +398,6 @@ class VoiceChannel : public BaseChannel {
                           webrtc::SdpType type,
                           std::string& error_desc)
       RTC_RUN_ON(worker_thread()) override;
-
-  // Last AudioSendParameters sent down to the media_channel() via
-  // SetSendParameters.
-  AudioSendParameters last_send_params_ RTC_GUARDED_BY(worker_thread());
-  // Last AudioRecvParameters sent down to the media_channel() via
-  // SetRecvParameters.
-  AudioRecvParameters last_recv_params_ RTC_GUARDED_BY(worker_thread());
 };
 
 // VideoChannel is a specialization for video.

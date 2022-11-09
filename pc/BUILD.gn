@@ -1468,6 +1468,8 @@ rtc_source_set("peer_connection_factory") {
   sources = [
     "peer_connection_factory.cc",
     "peer_connection_factory.h",
+    "peer_connection_factory_provider.cc",
+    "peer_connection_factory_provider.h",
   ]
   deps = [
     ":local_audio_source",

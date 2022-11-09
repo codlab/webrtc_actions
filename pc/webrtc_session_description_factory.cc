@@ -301,6 +301,19 @@ cricket::SecurePolicy WebRtcSessionDescriptionFactory::SdesPolicy() const {
   return session_desc_factory_.secure();
 }
 
+void WebRtcSessionDescriptionFactory::set_audio_codecs(const cricket::AudioCodecs& send_codecs,
+                                                       const cricket::AudioCodecs& recv_codecs)
+{
+  session_desc_factory_.set_audio_codecs(send_codecs, recv_codecs);
+}
+
+void WebRtcSessionDescriptionFactory::get_audio_codecs(cricket::AudioCodecs& send_codecs,
+                                                       cricket::AudioCodecs& recv_codecs)
+{
+  send_codecs = session_desc_factory_.audio_send_codecs();
+  recv_codecs = session_desc_factory_.audio_recv_codecs();
+}
+
 void WebRtcSessionDescriptionFactory::OnMessage(rtc::Message* msg) {
   switch (msg->message_id) {
     case MSG_CREATE_SESSIONDESCRIPTION_SUCCESS: {

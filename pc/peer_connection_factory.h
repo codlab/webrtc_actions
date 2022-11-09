@@ -122,6 +122,9 @@ class PeerConnectionFactory : public PeerConnectionFactoryInterface {
 
   cricket::MediaEngineInterface* media_engine() const;
 
+  TaskQueueFactory& task_queue_factory() {
+      return *task_queue_factory_;
+  }
  protected:
   // Constructor used by the static Create() method. Modifies the dependencies.
   PeerConnectionFactory(rtc::scoped_refptr<ConnectionContext> context,
