@@ -4581,6 +4581,7 @@ RTCError SdpOfferAnswerHandler::PushdownMediaDescription(
       }
     }
   }
+  pc_->UpdateSessionState(type, source);
   // Need complete offer/answer with an SCTP m= section before starting SCTP,
   // according to https://tools.ietf.org/html/draft-ietf-mmusic-sctp-sdp-19
   if (pc_->sctp_mid() && local_description() && remote_description()) {

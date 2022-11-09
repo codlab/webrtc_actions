@@ -35,7 +35,7 @@ class LegacyStatsCollector;
 class PeerConnectionSdpMethods {
  public:
   virtual ~PeerConnectionSdpMethods() = default;
-
+  virtual RTCError UpdateSessionState(SdpType type, cricket::ContentSource source) { assert(false); return RTCError::OK() ;}
   // The SDP session ID as defined by RFC 3264.
   virtual std::string session_id() const = 0;
 
