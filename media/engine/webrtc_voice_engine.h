@@ -87,7 +87,12 @@ class WebRtcVoiceEngine : public VoiceEngineInterface {
   // Stops AEC dump.
   void StopAecDump() override;
 
+  webrtc::AudioDeviceModule* adm() override;
+
  protected:
+  std::vector<AudioCodec> send_codecs_;
+  std::vector<AudioCodec> recv_codecs_;
+ private:
   // Every option that is "set" will be applied. Every option not "set" will be
   // ignored. This allows us to selectively turn on and off different options
   // easily at any time.
@@ -98,7 +103,6 @@ class WebRtcVoiceEngine : public VoiceEngineInterface {
   webrtc::TaskQueueFactory* const task_queue_factory_;
   std::unique_ptr<rtc::TaskQueue> low_priority_worker_queue_;
 
-  webrtc::AudioDeviceModule* adm();
   webrtc::AudioProcessing* apm() const;
   webrtc::AudioState* audio_state();
 
@@ -119,8 +123,6 @@ class WebRtcVoiceEngine : public VoiceEngineInterface {
   webrtc::AudioFrameProcessor* const audio_frame_processor_;
   // The primary instance of WebRtc VoiceEngine.
   rtc::scoped_refptr<webrtc::AudioState> audio_state_;
-  std::vector<AudioCodec> send_codecs_;
-  std::vector<AudioCodec> recv_codecs_;
   bool is_dumping_aec_ = false;
   bool initialized_ = false;
 

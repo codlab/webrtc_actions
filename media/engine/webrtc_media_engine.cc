@@ -8,6 +8,7 @@
  *  be found in the AUTHORS file in the root of the source tree.
  */
 
+#include "dvc/dvc_voice_engine_provider.h"
 #include "media/engine/webrtc_media_engine.h"
 
 #include <map>
@@ -34,13 +35,22 @@ std::unique_ptr<MediaEngineInterface> CreateMediaEngine(
       dependencies.trials ? nullptr : new webrtc::FieldTrialBasedConfig());
   const webrtc::FieldTrialsView& trials =
       dependencies.trials ? *dependencies.trials : *fallback_trials;
-  auto audio_engine = std::make_unique<WebRtcVoiceEngine>(
-      dependencies.task_queue_factory, dependencies.adm.get(),
-      std::move(dependencies.audio_encoder_factory),
-      std::move(dependencies.audio_decoder_factory),
-      std::move(dependencies.audio_mixer),
-      std::move(dependencies.audio_processing),
-      dependencies.audio_frame_processor, trials);
+  //auto audio_engine = std::make_unique<WebRtcVoiceEngine>(
+  //    dependencies.task_queue_factory, dependencies.adm.get(),
+  //    std::move(dependencies.audio_encoder_factory),
+  //    std::move(dependencies.audio_decoder_factory),
+  //    std::move(dependencies.audio_mixer),
+  //    std::move(dependencies.audio_processing),
+  //    dependencies.audio_frame_processor, trials);
+  auto audio_engine =
+      dolby_voice_client::webrtc_integration::DvcVoiceEngineModuleProvider::Create(
+          dependencies.task_queue_factory,
+          dependencies.adm.get(),
+          std::move(dependencies.audio_encoder_factory),
+          std::move(dependencies.audio_decoder_factory),
+          std::move(dependencies.audio_mixer),
+          std::move(dependencies.audio_processing),
+          dependencies.audio_frame_processor, trials);
 #ifdef HAVE_WEBRTC_VIDEO
   auto video_engine = std::make_unique<WebRtcVideoEngine>(
       std::move(dependencies.video_encoder_factory),

@@ -353,6 +353,8 @@ rtc_library("rtc_audio_video") {
     "engine/webrtc_video_engine.h",
     "engine/webrtc_voice_engine.cc",
     "engine/webrtc_voice_engine.h",
+    "../dvc/dvc_voice_engine_provider.h",
+    "../dvc/dvc_voice_engine_provider.cc",
   ]
 
   public_configs = []

@@ -31,7 +31,9 @@ class DvcVoiceEngineModuleProvider {
         const rtc::scoped_refptr<webrtc::AudioEncoderFactory>& encoder_factory,
         const rtc::scoped_refptr<webrtc::AudioDecoderFactory>& decoder_factory,
         rtc::scoped_refptr<webrtc::AudioMixer> audio_mixer,
-        rtc::scoped_refptr<webrtc::AudioProcessing> audio_processing);
+        rtc::scoped_refptr<webrtc::AudioProcessing> audio_processing,
+        webrtc::AudioFrameProcessor* audio_frame_processor,
+        const webrtc::FieldTrialsView& trials);
 
   static WebRtcVoiceEngineProvider provider;
 
@@ -41,14 +43,18 @@ class DvcVoiceEngineModuleProvider {
       const rtc::scoped_refptr<webrtc::AudioEncoderFactory>& encoder_factory,
       const rtc::scoped_refptr<webrtc::AudioDecoderFactory>& decoder_factory,
       rtc::scoped_refptr<webrtc::AudioMixer> audio_mixer,
-      rtc::scoped_refptr<webrtc::AudioProcessing> audio_processing) {
+      rtc::scoped_refptr<webrtc::AudioProcessing> audio_processing,
+      webrtc::AudioFrameProcessor* audio_frame_processor,
+      const webrtc::FieldTrialsView& trials) {
     if (provider) {
       return provider(task_queue_factory,
-        adm,
-        std::move(encoder_factory),
-        std::move(decoder_factory),
-        std::move(audio_mixer),
-        std::move(audio_processing));
+                      adm,
+                      std::move(encoder_factory),
+                      std::move(decoder_factory),
+                      std::move(audio_mixer),
+                      std::move(audio_processing),
+                      audio_frame_processor,
+                      trials);
     }
     return nullptr;
   }
