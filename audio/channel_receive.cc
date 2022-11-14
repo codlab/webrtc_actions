@@ -10,6 +10,8 @@
 
 #include "audio/channel_receive.h"
 
+#include "dvc/media/engine/dvcvoicemediachannel.h"
+
 #include <algorithm>
 #include <map>
 #include <memory>
@@ -281,6 +283,10 @@ class ChannelReceive : public ChannelReceiveInterface,
 
   SequenceChecker construction_thread_;
 
+  dolby_voice_client::webrtc_integration::DvcVoiceMediaChannel* _dvc_channel
+      RTC_GUARDED_BY(worker_thread_checker_);
+  int32_t _last_minimum_playout_delay_ms
+      RTC_GUARDED_BY(worker_thread_checker_);
   // E2EE Audio Frame Decryption
   rtc::scoped_refptr<FrameDecryptorInterface> frame_decryptor_
       RTC_GUARDED_BY(worker_thread_checker_);
@@ -547,6 +553,8 @@ ChannelReceive::ChannelReceive(
       _audioDeviceModulePtr(audio_device_module),
       _outputGain(1.0f),
       associated_send_channel_(nullptr),
+      _dvc_channel(NULL),
+      _last_minimum_playout_delay_ms(-1),
       frame_decryptor_(frame_decryptor),
       crypto_options_(crypto_options),
       absolute_capture_time_interpolator_(clock) {
@@ -558,6 +566,10 @@ ChannelReceive::ChannelReceive(
   acm_receiver_.SetMinimumDelay(0);
   acm_receiver_.SetMaximumDelay(0);
   acm_receiver_.FlushBuffers();
+
+  if (rtcp_send_transport) {
+    _dvc_channel = rtcp_send_transport->GetDvcVoiceMediaChannel();
+  }
 
   _outputAudioLevel.ResetLevelFullRange();
 
@@ -954,8 +966,12 @@ AudioDecodingCallStats ChannelReceive::GetDecodingCallStatistics() const {
 
 uint32_t ChannelReceive::GetDelayEstimate() const {
   RTC_DCHECK_RUN_ON(&worker_thread_checker_);
+  //TODO: Do we need callback_mutex_ here?
   // Return the current jitter buffer delay + playout delay.
-  return acm_receiver_.FilteredCurrentDelayMs() + playout_delay_ms_;
+  if (_dvc_channel != nullptr && _dvc_channel->IsUsingDvcCodec())
+    return _last_minimum_playout_delay_ms + playout_delay_ms_;
+  else
+    return acm_receiver_.FilteredCurrentDelayMs() + playout_delay_ms_;
 }
 
 bool ChannelReceive::SetMinimumPlayoutDelay(int delay_ms) {
@@ -967,6 +983,13 @@ bool ChannelReceive::SetMinimumPlayoutDelay(int delay_ms) {
   // close as possible, instead of failing.
   delay_ms = rtc::SafeClamp(delay_ms, kVoiceEngineMinMinPlayoutDelayMs,
                             kVoiceEngineMaxMinPlayoutDelayMs);
+
+  if (_dvc_channel != nullptr) {
+    _dvc_channel->SetMinimumPlayoutDelay(delay_ms);
+  }
+
+  _last_minimum_playout_delay_ms = delay_ms;
+
   if (acm_receiver_.SetMinimumDelay(delay_ms) != 0) {
     RTC_DLOG(LS_ERROR)
         << "SetMinimumPlayoutDelay() failed to set min playout delay";

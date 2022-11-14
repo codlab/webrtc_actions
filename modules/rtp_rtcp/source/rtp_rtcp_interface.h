@@ -199,6 +199,8 @@ class RtpRtcpInterface : public RtcpFeedbackSenderInterface {
   // Sender
   // **************************************************************************
 
+  virtual void SetAudioClockRate(int clock_rate_hz) = 0;
+
   // Sets the maximum size of an RTP packet, including RTP headers.
   virtual void SetMaxRtpPacketSize(size_t size) = 0;
 

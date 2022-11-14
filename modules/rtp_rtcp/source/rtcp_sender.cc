@@ -170,7 +170,8 @@ RTCPSender::RTCPSender(Configuration config)
           config.non_sender_rtt_measurement),
       packet_type_counter_observer_(config.rtcp_packet_type_counter_observer),
       send_video_bitrate_allocation_(false),
-      last_payload_type_(-1) {
+      last_payload_type_(-1),
+      audio_clock_rate_(kBogusRtpRateForAudioRtcp) {
   RTC_DCHECK(transport_ != nullptr);
 
   builders_[kRtcpSr] = &RTCPSender::BuildSR;
@@ -192,6 +193,11 @@ RTCPSender::~RTCPSender() {}
 RtcpMode RTCPSender::Status() const {
   MutexLock lock(&mutex_rtcp_sender_);
   return method_;
+}
+
+void RTCPSender::SetAudioClockRate(int rate) {
+  MutexLock lock(&mutex_rtcp_sender_);
+  audio_clock_rate_ = rate;
 }
 
 void RTCPSender::SetRTCPStatus(RtcpMode new_method) {
@@ -449,8 +455,7 @@ void RTCPSender::BuildSR(const RtcpContext& ctx, PacketSender& sender) {
   int rtp_rate = rtp_clock_rates_khz_[last_payload_type_];
   if (rtp_rate <= 0) {
     rtp_rate =
-        (audio_ ? kBogusRtpRateForAudioRtcp : kVideoPayloadTypeFrequency) /
-        1000;
+        (audio_ ? audio_clock_rate_ : kVideoPayloadTypeFrequency) / 1000;
   }
   // Round now_us_ to the closest millisecond, because Ntp time is rounded
   // when converted to milliseconds,

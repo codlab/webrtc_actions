@@ -164,6 +164,9 @@ class RTCPSender final {
 
   bool TMMBR() const RTC_LOCKS_EXCLUDED(mutex_rtcp_sender_);
 
+  void SetAudioClockRate(int clock_rate_hz_)
+      RTC_LOCKS_EXCLUDED(mutex_rtcp_sender_);
+
   void SetMaxRtpPacketSize(size_t max_packet_size)
       RTC_LOCKS_EXCLUDED(mutex_rtcp_sender_);
 
@@ -299,6 +302,7 @@ class RTCPSender final {
 
   std::map<int8_t, int> rtp_clock_rates_khz_ RTC_GUARDED_BY(mutex_rtcp_sender_);
   int8_t last_payload_type_ RTC_GUARDED_BY(mutex_rtcp_sender_);
+  int audio_clock_rate_ RTC_GUARDED_BY(mutex_rtcp_sender_);
 
   absl::optional<VideoBitrateAllocation> CheckAndUpdateLayerStructure(
       const VideoBitrateAllocation& bitrate) const

@@ -33,6 +33,7 @@ class MockRtpRtcpInterface : public RtpRtcpInterface {
               IncomingRtcpPacket,
               (const uint8_t* incoming_packet, size_t packet_length),
               (override));
+  MOCK_METHOD(void, SetAudioClockRate, void(int clock_rate_hz), (override));
   MOCK_METHOD(void, SetRemoteSSRC, (uint32_t ssrc), (override));
   MOCK_METHOD(void, SetLocalSsrc, (uint32_t ssrc), (override));
   MOCK_METHOD(void, SetMaxRtpPacketSize, (size_t size), (override));

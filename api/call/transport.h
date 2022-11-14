@@ -17,6 +17,12 @@
 #include "api/ref_counted_base.h"
 #include "api/scoped_refptr.h"
 
+namespace dolby_voice_client {
+namespace webrtc_integration {
+class DvcVoiceMediaChannel;
+}
+}
+
 namespace webrtc {
 
 // TODO(holmer): Look into unifying this with the PacketOptions in
@@ -44,6 +50,7 @@ class Transport {
                        size_t length,
                        const PacketOptions& options) = 0;
   virtual bool SendRtcp(const uint8_t* packet, size_t length) = 0;
+  virtual dolby_voice_client::webrtc_integration::DvcVoiceMediaChannel* GetDvcVoiceMediaChannel() const;
 
  protected:
   virtual ~Transport() {}

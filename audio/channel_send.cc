@@ -17,6 +17,8 @@
 #include <utility>
 #include <vector>
 
+#include "dvc/media/engine/dvcvoicemediachannel.h"
+
 #include "api/array_view.h"
 #include "api/call/transport.h"
 #include "api/crypto/frame_encryptor_interface.h"
@@ -195,6 +197,7 @@ class ChannelSend : public ChannelSendInterface,
 
   std::unique_ptr<ModuleRtpRtcpImpl2> rtp_rtcp_;
   std::unique_ptr<RTPSenderAudio> rtp_sender_audio_;
+  dolby_voice_client::webrtc_integration::DvcVoiceMediaChannel* _dvc_channel;
 
   std::unique_ptr<AudioCodingModule> audio_coding_;
   uint32_t _timeStamp RTC_GUARDED_BY(encoder_queue_);
@@ -413,6 +416,34 @@ int32_t ChannelSend::SendRtpAudio(AudioFrameType frameType,
     }
   }
 
+  if (_dvc_channel != nullptr && _dvc_channel->IsUsingDvcCodec()) {
+    // Get audio payload received from the DVC and and push everything to the
+    // rtp/rtcp module
+    std::vector<dolby_voice_client::webrtc_integration::AudioBuffer>
+        packets_to_send;
+
+    if (!_dvc_channel->GetPacketsToSend(packets_to_send))
+      return 0;
+
+    for (auto& packet_to_send : packets_to_send) {
+      if (!rtp_rtcp_->OnSendingRtpFrame(packet_to_send.rtp_header_.timestamp,
+                                        packet_to_send.receive_time_ms_, payloadType,
+                                        /*force_sender_report=*/false)) {
+        return -1;
+      }
+      if (!rtp_sender_audio_->SendAudio(
+              AudioFrameType::kAudioFrameSpeech, payloadType,
+              packet_to_send.rtp_header_.timestamp +
+                                        rtp_rtcp_->StartTimestamp(),
+              packet_to_send.payload.data(), packet_to_send.payload.size())) {
+        RTC_DLOG(LS_ERROR)
+            << "ChannelSend::SendData() failed to send data to RTP/RTCP module";
+        return -1;
+      }
+    }
+    return 0;
+  }
+  
   // Push data from ACM to RTP/RTCP-module to deliver audio frame for
   // packetization.
   if (!rtp_rtcp_->OnSendingRtpFrame(rtp_timestamp,
@@ -458,6 +489,7 @@ ChannelSend::ChannelSend(
     const FieldTrialsView& field_trials)
     : ssrc_(ssrc),
       event_log_(rtc_event_log),
+      _dvc_channel(NULL),
       _timeStamp(0),  // This is just an offset, RTP module will add it's own
                       // random offset
       input_mute_(false),
@@ -476,6 +508,10 @@ ChannelSend::ChannelSend(
           "AudioEncoder",
           TaskQueueFactory::Priority::NORMAL)) {
   audio_coding_.reset(AudioCodingModule::Create(AudioCodingModule::Config()));
+
+  if (rtp_transport) {
+    _dvc_channel = rtp_transport->GetDvcVoiceMediaChannel();
+  }
 
   RtpRtcpInterface::Configuration configuration;
   configuration.bandwidth_callback = rtcp_observer_.get();
@@ -581,6 +617,11 @@ void ChannelSend::SetEncoder(int payload_type,
                                           encoder->RtpTimestampRateHz(),
                                           encoder->NumChannels(), 0);
 
+  // If we're using DTX, the RTCP sender must know the real clock frequency,
+  // otherwise it will calculate invalid RTP timestamps during silence, causing
+  // A/V sync problems on the receiver side.
+  rtp_rtcp_->SetAudioClockRate(encoder->RtpTimestampRateHz());
+  
   audio_coding_->SetEncoder(std::move(encoder));
 }
 
@@ -652,6 +693,8 @@ void ChannelSend::SetInputMute(bool enable) {
   RTC_DCHECK_RUN_ON(&worker_thread_checker_);
   MutexLock lock(&volume_settings_mutex_);
   input_mute_ = enable;
+  if (_dvc_channel)
+    _dvc_channel->SetInputMute(enable);
 }
 
 bool ChannelSend::InputMute() const {

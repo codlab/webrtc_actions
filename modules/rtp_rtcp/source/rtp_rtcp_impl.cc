@@ -446,6 +446,11 @@ size_t ModuleRtpRtcpImpl::MaxRtpPacketSize() const {
   return rtp_sender_->packet_generator.MaxRtpPacketSize();
 }
 
+void ModuleRtpRtcpImpl::SetAudioClockRate(int clock_rate_hz_) {
+  RTC_DCHECK(rtp_sender_);
+  rtcp_sender_.SetAudioClockRate(clock_rate_hz_);
+}
+
 void ModuleRtpRtcpImpl::SetMaxRtpPacketSize(size_t rtp_packet_size) {
   RTC_DCHECK_LE(rtp_packet_size, IP_PACKET_SIZE)
       << "rtp packet size too large: " << rtp_packet_size;

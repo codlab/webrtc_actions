@@ -219,6 +219,8 @@ class ModuleRtpRtcpImpl2 final : public RtpRtcpInterface,
 
   size_t MaxRtpPacketSize() const override;
 
+  void SetAudioClockRate(int clock_rate_hz) override;
+
   void SetMaxRtpPacketSize(size_t max_packet_size) override;
 
   // (NACK) Negative acknowledgment part.

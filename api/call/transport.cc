@@ -20,4 +20,8 @@ PacketOptions::PacketOptions(const PacketOptions&) = default;
 
 PacketOptions::~PacketOptions() = default;
 
+dolby_voice_client::webrtc_integration::DvcVoiceMediaChannel* Transport::GetDvcVoiceMediaChannel() const {
+  return nullptr;
+}
+
 }  // namespace webrtc
