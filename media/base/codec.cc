@@ -19,6 +19,8 @@
 #include "rtc_base/string_encode.h"
 #include "rtc_base/strings/string_builder.h"
 
+#include "dvc/dvc_constants.h"
+
 namespace cricket {
 namespace {
 
@@ -249,7 +251,22 @@ bool AudioCodec::Matches(const AudioCodec& codec,
   // omitted if the number of channels is one."
   // Preference is ignored.
   // TODO(juberti): Treat a zero clockrate as 8000Hz, the RTP default clockrate.
-  return Codec::Matches(codec, field_trials) &&
+  if (absl::EqualsIgnoreCase(name.c_str(),
+               dolby_voice_client::webrtc_integration::DVC_CODEC_NAME) &&
+      absl::EqualsIgnoreCase(codec.name.c_str(),
+               dolby_voice_client::webrtc_integration::DVC_CODEC_NAME)) {
+    if (HasDvc2Params() != codec.HasDvc2Params())
+      return false;
+    if (HasDvc2Params()) {
+      if (Dvc2ProtocolVersion() != codec.Dvc2ProtocolVersion())
+        return false;
+      if (Dvc2ConnectionMode() != codec.Dvc2ConnectionMode())
+        return false;
+      if (Dvc2SourceSide() != codec.Dvc2SourceSide())
+        return false;
+    }
+  }
+  return Codec::Matches(codec) &&
          ((codec.clockrate == 0 /*&& clockrate == 8000*/) ||
           clockrate == codec.clockrate) &&
          (codec.bitrate == 0 || bitrate <= 0 || bitrate == codec.bitrate) &&
@@ -269,6 +286,74 @@ webrtc::RtpCodecParameters AudioCodec::ToCodecParameters() const {
   codec_params.num_channels = static_cast<int>(channels);
   codec_params.kind = MEDIA_TYPE_AUDIO;
   return codec_params;
+}
+
+dolby_voice_client::webrtc_integration::DVC2ConnectionMode
+AudioCodec::Dvc2ConnectionMode() const {
+  std::string mode;
+  if (GetParam("mode", &mode)) {
+    if (mode == "cc")
+      return dolby_voice_client::webrtc_integration::DVC2ConnectionMode::CC;
+    else if (mode == "cs")
+      return dolby_voice_client::webrtc_integration::DVC2ConnectionMode::CS;
+  }
+  return dolby_voice_client::webrtc_integration::DVC2ConnectionMode::CS;
+}
+
+dolby_voice_client::webrtc_integration::DVC2SourceSide
+AudioCodec::Dvc2SourceSide() const {
+  std::string source;
+  if (GetParam("source", &source)) {
+    if (source == "client")
+      return dolby_voice_client::webrtc_integration::DVC2SourceSide::CLIENT;
+    else if (source == "server")
+      return dolby_voice_client::webrtc_integration::DVC2SourceSide::SERVER;
+  }
+  return dolby_voice_client::webrtc_integration::DVC2SourceSide::SERVER;
+}
+
+int AudioCodec::Dvc2ProtocolVersion() const
+{
+    int version;
+    if (GetParam("version", &version))
+        return version;
+    return 0;
+}
+
+void AudioCodec::SetDvc2Params(
+    const dolby_voice_client::webrtc_integration::DvcAudioCodec& params) {
+  if (params.encoding ==
+          dolby_voice_client::webrtc_integration::DvcRTPEncoding::DVC2 &&
+      params.has_dvc2_params) {
+    if (params.dvc2_connection_mode ==
+        dolby_voice_client::webrtc_integration::DVC2ConnectionMode::CC)
+      SetParam("mode", "cc");
+    else
+      SetParam("mode", "cs");
+    SetParam("version", static_cast<int>(params.dvc2_protocol_version));
+    if (params.dvc2_source_side ==
+        dolby_voice_client::webrtc_integration::DVC2SourceSide::CLIENT)
+      SetParam("source", "client");
+    else
+      SetParam("source", "server");
+  }
+}
+
+bool AudioCodec::HasDvc2Params() const
+{
+  if (!absl::EqualsIgnoreCase(name.c_str(),
+               dolby_voice_client::webrtc_integration::DVC_CODEC_NAME))
+    return false;
+  CodecParameterMap::const_iterator iter = params.find("mode");
+  if (iter == params.end())
+    return false;
+  iter = params.find("source");
+  if (iter == params.end())
+    return false;
+  iter = params.find("version");
+  if (iter == params.end())
+    return false;
+  return true;
 }
 
 std::string VideoCodec::ToString() const {

@@ -24,6 +24,7 @@
 #include "api/video_codecs/sdp_video_format.h"
 #include "media/base/media_constants.h"
 #include "rtc_base/system/rtc_export.h"
+#include "dvc/dvc_conference_factory_env.h"
 
 namespace cricket {
 
@@ -149,6 +150,16 @@ struct AudioCodec : public Codec {
   bool operator==(const AudioCodec& c) const;
 
   bool operator!=(const AudioCodec& c) const { return !(*this == c); }
+
+  // DVC2-specific methods added to base class. If we made some AudioCodecDVC
+  // class, then for the remote side the webrtc would still parse SDP and
+  // create generic AudioCodec instance, and matching DVC-2 codecs would be
+  // broken.
+  dolby_voice_client::webrtc_integration::DVC2ConnectionMode Dvc2ConnectionMode() const;
+  dolby_voice_client::webrtc_integration::DVC2SourceSide Dvc2SourceSide() const;
+  int Dvc2ProtocolVersion() const;
+  void SetDvc2Params(const dolby_voice_client::webrtc_integration::DvcAudioCodec& params);
+  bool HasDvc2Params() const;
 };
 
 struct RTC_EXPORT VideoCodec : public Codec {
