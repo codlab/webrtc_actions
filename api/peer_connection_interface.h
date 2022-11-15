@@ -760,6 +760,8 @@ class RTC_EXPORT PeerConnectionInterface : public rtc::RefCountInterface {
     kStatsOutputLevelDebug,
   };
 
+  virtual bool SetDvcListenerMode(bool listener_mode, std::string* out_error) = 0;
+
   // Accessor methods to active local streams.
   // This method is not supported with kUnifiedPlan semantics. Please use
   // GetSenders() instead.
