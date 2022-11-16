@@ -652,6 +652,7 @@ ABSL_CONST_INIT thread_local bool mutex_locked = false;
 }
 
 - (NSInteger)decrementActivationCount {
+  RTC_DCHECK(_activationCount > 0);
   RTCLog(@"Decrementing activation count.");
   return _activationCount.fetch_sub(1) - 1;
 }
@@ -822,15 +823,21 @@ ABSL_CONST_INIT thread_local bool mutex_locked = false;
     RTCLogError(@"audioSessionDidActivate called on different AVAudioSession");
   }
   RTCLog(@"Audio session was externally activated.");
-  [self incrementActivationCount];
-  self.isActive = YES;
-  // When a CallKit call begins, it's possible that we receive an interruption
-  // begin without a corresponding end. Since we know that we have an activated
-  // audio session at this point, just clear any saved interruption flag since
-  // the app may never be foregrounded during the duration of the call.
-  if (self.isInterrupted) {
+  bool logIfWasInterrupted = NO;
+  @synchronized(self) {
+    [self incrementActivationCount];
+    self.isActive = YES;
+    // When a CallKit call begins, it's possible that we receive an interruption
+    // begin without a corresponding end. Since we know that we have an activated
+    // audio session at this point, just clear any saved interruption flag since
+    // the app may never be foregrounded during the duration of the call.
+    if (self.isInterrupted) {
+      logIfWasInterrupted = YES;
+      self.isInterrupted = NO;
+    }
+  }
+  if(logIfWasInterrupted) {
     RTCLog(@"Clearing interrupted state due to external activation.");
-    self.isInterrupted = NO;
   }
   // Treat external audio session activation as an end interruption event.
   [self notifyDidEndInterruptionWithShouldResumeSession:YES];
@@ -841,8 +848,12 @@ ABSL_CONST_INIT thread_local bool mutex_locked = false;
     RTCLogError(@"audioSessionDidDeactivate called on different AVAudioSession");
   }
   RTCLog(@"Audio session was externally deactivated.");
-  self.isActive = NO;
-  [self decrementActivationCount];
+  @synchronized(self) {
+     self.isActive = NO;
+     if(_activationCount > 0) {
+       [self decrementActivationCount];
+     }
+   }
 }
 
 - (void)observeValueForKeyPath:(NSString *)keyPath
