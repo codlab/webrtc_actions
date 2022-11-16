@@ -152,7 +152,7 @@ NetEqImpl::NetEqImpl(const NetEq::Config& config,
   controller_->SetSampleRate(fs_hz_, output_size_samples_);
   decoder_frame_length_ = 2 * output_size_samples_;  // 20 ms.
   if (create_components) {
-    SetSampleRateAndChannels(fs, 1);  // Default is 1 channel.
+    SetSampleRateAndChannels(fs, 2);  // Default is 2 channels.
   }
   RTC_DCHECK(!vad_->enabled());
   if (config.enable_post_decode_vad) {
@@ -724,7 +724,7 @@ int NetEqImpl::InsertPacketInternal(const RTPHeader& rtp_header,
     const Packet* next_packet = packet_buffer_->PeekNextPacket();
     RTC_DCHECK(next_packet);
     const int payload_type = next_packet->payload_type;
-    size_t channels = 1;
+    size_t channels = 2;
     if (!decoder_database_->IsComfortNoise(payload_type)) {
       AudioDecoder* decoder = decoder_database_->GetDecoder(payload_type);
       RTC_DCHECK(decoder);  // Payloads are already checked to be valid.

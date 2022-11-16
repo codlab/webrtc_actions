@@ -220,17 +220,19 @@ bool VoiceProcessingAudioUnit::Initialize(Float64 sample_rate) {
   RTCLog(@"Initializing audio unit with sample rate: %f", sample_rate);
 
   OSStatus result = noErr;
-  AudioStreamBasicDescription format = GetFormat(sample_rate);
-  UInt32 size = sizeof(format);
+  AudioStreamBasicDescription inputFormat = GetInputFormat(sample_rate);
+  AudioStreamBasicDescription outputFormat = GetOutputFormat(sample_rate);
+  UInt32 size = sizeof(inputFormat);
 #if !defined(NDEBUG)
-  LogStreamDescription(format);
+  LogStreamDescription(inputFormat);
+  LogStreamDescription(outputFormat);
 #endif
   RTCAudioSessionConfiguration* webRTCConfiguration =  [RTCAudioSessionConfiguration webRTCConfiguration];
   if (!webRTCConfiguration.listenMode) {
     // Set the format on the output scope of the input element/bus.
     result =
     AudioUnitSetProperty(vpio_unit_, kAudioUnitProperty_StreamFormat,
-                         kAudioUnitScope_Output, kInputBus, &format, size);
+                         kAudioUnitScope_Output, kInputBus, &inputFormat, size);
     if (result != noErr) {
       RTCLogError(@"Failed to set format on output scope of input bus. "
                   "Error=%ld.",
@@ -245,7 +247,7 @@ bool VoiceProcessingAudioUnit::Initialize(Float64 sample_rate) {
   // Set the format on the input scope of the output element/bus.
   result =
       AudioUnitSetProperty(vpio_unit_, kAudioUnitProperty_StreamFormat,
-                           kAudioUnitScope_Input, kOutputBus, &format, size);
+                           kAudioUnitScope_Input, kOutputBus, &outputFormat, size);
   if (result != noErr) {
     RTCLogError(@"Failed to set format on input scope of output bus. "
                  "Error=%ld.",
@@ -466,15 +468,14 @@ OSStatus VoiceProcessingAudioUnit::NotifyDeliverRecordedData(
                                           num_frames, io_data);
 }
 
-AudioStreamBasicDescription VoiceProcessingAudioUnit::GetFormat(
+AudioStreamBasicDescription VoiceProcessingAudioUnit::GetInputFormat(
     Float64 sample_rate) const {
-  // Set the application formats for input and output:
-  // - use same format in both directions
+  // Set the application formats for input:
   // - avoid resampling in the I/O unit by using the hardware sample rate
   // - linear PCM => noncompressed audio data format with one frame per packet
   // - no need to specify interleaving since only mono is supported
   AudioStreamBasicDescription format;
-  RTC_DCHECK_EQ(1, kRTCAudioSessionPreferredNumberOfChannels);
+  RTC_DCHECK_EQ(1, kRTCAudioSessionPreferredNumberOfInputChannels);
   format.mSampleRate = sample_rate;
   format.mFormatID = kAudioFormatLinearPCM;
   format.mFormatFlags =
@@ -482,7 +483,24 @@ AudioStreamBasicDescription VoiceProcessingAudioUnit::GetFormat(
   format.mBytesPerPacket = kBytesPerSample;
   format.mFramesPerPacket = 1;  // uncompressed.
   format.mBytesPerFrame = kBytesPerSample;
-  format.mChannelsPerFrame = kRTCAudioSessionPreferredNumberOfChannels;
+  format.mChannelsPerFrame = kRTCAudioSessionPreferredNumberOfInputChannels;
+  format.mBitsPerChannel = 8 * kBytesPerSample;
+  return format;
+}
+
+AudioStreamBasicDescription VoiceProcessingAudioUnit::GetOutputFormat(Float64 sample_rate) const {
+  // Set the application formats for output:
+  // - linear PCM => noncompressed audio data format with one frame per packet
+  AudioStreamBasicDescription format;
+  RTC_DCHECK_EQ(2, kRTCAudioSessionPreferredNumberOfOutputChannels);
+  format.mSampleRate = sample_rate;
+  format.mFormatID = kAudioFormatLinearPCM;
+  format.mFormatFlags =
+  kLinearPCMFormatFlagIsSignedInteger | kLinearPCMFormatFlagIsPacked;// | kAudioFormatFlagIsNonInterleaved;
+  format.mBytesPerPacket = kBytesPerSample * kRTCAudioSessionPreferredNumberOfOutputChannels;
+  format.mFramesPerPacket = 1;  // uncompressed.
+  format.mBytesPerFrame = kBytesPerSample * kRTCAudioSessionPreferredNumberOfOutputChannels;
+  format.mChannelsPerFrame = kRTCAudioSessionPreferredNumberOfOutputChannels;
   format.mBitsPerChannel = 8 * kBytesPerSample;
   return format;
 }

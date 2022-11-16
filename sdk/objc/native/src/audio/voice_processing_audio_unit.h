@@ -125,7 +125,8 @@ class VoiceProcessingAudioUnit {
 
   // Returns the predetermined format with a specific sample rate. See
   // implementation file for details on format.
-  AudioStreamBasicDescription GetFormat(Float64 sample_rate) const;
+  AudioStreamBasicDescription GetInputFormat(Float64 sample_rate) const;
+  AudioStreamBasicDescription GetOutputFormat(Float64 sample_rate) const;
 
   // Deletes the underlying audio unit.
   void DisposeAudioUnit();
