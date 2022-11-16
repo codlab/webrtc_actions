@@ -57,7 +57,7 @@ static RTC_OBJC_TYPE(RTCAudioSessionConfiguration) *gWebRTCConfiguration = nil;
 
 @synthesize category = _category;
 @synthesize categoryOptions = _categoryOptions;
-@synthesize mode = _mode;
+@synthesize listenMode = _listenMode;
 @synthesize sampleRate = _sampleRate;
 @synthesize ioBufferDuration = _ioBufferDuration;
 @synthesize inputNumberOfChannels = _inputNumberOfChannels;
@@ -72,8 +72,8 @@ static RTC_OBJC_TYPE(RTCAudioSessionConfiguration) *gWebRTCConfiguration = nil;
     _category = AVAudioSessionCategoryPlayAndRecord;
     _categoryOptions = AVAudioSessionCategoryOptionAllowBluetooth;
 
-    // Specify mode for two-way voice communication (e.g. VoIP).
-    _mode = AVAudioSessionModeVoiceChat;
+    // Specify mode for two-way voice communication (e.g. VoIP) or listen mode.
+    _listenMode = false;
 
     // Set the session's sample rate or the hardware sample rate.
     // It is essential that we use the same sample rate as stream format
@@ -110,7 +110,7 @@ static RTC_OBJC_TYPE(RTCAudioSessionConfiguration) *gWebRTCConfiguration = nil;
       [[RTC_OBJC_TYPE(RTCAudioSessionConfiguration) alloc] init];
   config.category = session.category;
   config.categoryOptions = session.categoryOptions;
-  config.mode = session.mode;
+  config.listenMode = session.mode != AVAudioSessionModeVoiceChat;
   config.sampleRate = session.sampleRate;
   config.ioBufferDuration = session.IOBufferDuration;
   config.inputNumberOfChannels = session.inputNumberOfChannels;

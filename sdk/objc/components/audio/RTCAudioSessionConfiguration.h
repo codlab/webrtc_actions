@@ -27,7 +27,7 @@ RTC_OBJC_EXPORT
 
 @property(nonatomic, strong) NSString *category;
 @property(nonatomic, assign) AVAudioSessionCategoryOptions categoryOptions;
-@property(nonatomic, strong) NSString *mode;
+@property(atomic, assign)    bool listenMode;
 @property(nonatomic, assign) double sampleRate;
 @property(nonatomic, assign) NSTimeInterval ioBufferDuration;
 @property(nonatomic, assign) NSInteger inputNumberOfChannels;

@@ -63,14 +63,15 @@
     }
   }
 
-  if (self.mode != configuration.mode) {
+  NSString* mode = configuration.listenMode ? AVAudioSessionModeDefault : AVAudioSessionModeVoiceChat;
+  if (self.mode != mode) {
     NSError *modeError = nil;
-    if (![self setMode:configuration.mode error:&modeError]) {
+    if (![self setMode:mode error:&modeError]) {
       RTCLogError(@"Failed to set mode: %@",
                   modeError.localizedDescription);
       error = modeError;
     } else {
-      RTCLog(@"Set mode to: %@", configuration.mode);
+      RTCLog(@"Set mode to: %@", mode);
     }
   }
 
@@ -128,9 +129,7 @@
     }
   }
 
-  if (self.isActive &&
-      // TODO(tkchin): Figure out which category/mode numChannels is valid for.
-      [self.mode isEqualToString:AVAudioSessionModeVoiceChat]) {
+  if (self.isActive) {
     // Try to set the preferred number of hardware audio channels. These calls
     // must be done after setting the audio session’s category and mode and
     // activating the session.
@@ -156,9 +155,13 @@
                                               error:&outputChannelsError]) {
         RTCLogError(@"Failed to set preferred output number of channels: %@",
                     outputChannelsError.localizedDescription);
-        if (!self.ignoresPreferredAttributeConfigurationErrors) {
-          error = outputChannelsError;
-        }
+        // ezuga: For some devices calling setPreferredOutputNumberOfChannels fails due
+        // to requesting more channels that may be supported. setPreferredOutputNumberOfChannels is called only
+        // once when webRTC channel is created. At that time we may read maximumOutputNumberOfChannels only for the device
+        // that is active on conference join. Proper solution would be to call this api on each device (route) change.
+        //if (!self.ignoresPreferredAttributeConfigurationErrors) {
+        //  error = outputChannelsError;
+        //}
       } else {
         RTCLog(@"Set output number of channels to: %ld",
                (long)outputNumberOfChannels);
