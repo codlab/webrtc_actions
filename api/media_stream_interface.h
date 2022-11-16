@@ -89,6 +89,11 @@ class RTC_EXPORT MediaStreamTrackInterface : public rtc::RefCountInterface,
   // Track identifier.
   virtual std::string id() const = 0;
 
+  // CCS-2143: Added to correlate the track id in the SDP with the respective
+  // local track object
+  virtual std::string sdp_id() const = 0;
+  virtual void sdp_id(const std::string& id) = 0;
+
   // A disabled track will produce silence (if audio) or black frames (if
   // video). Can be disabled and re-enabled.
   virtual bool enabled() const = 0;

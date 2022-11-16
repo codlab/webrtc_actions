@@ -27,6 +27,12 @@ class MediaStreamTrack : public Notifier<T> {
   typedef typename T::TrackState TypedTrackState;
 
   std::string id() const override { return id_; }
+
+  // CCS-2143: Added to correlate the track id in the SDP with the respective
+  // local track object
+  std::string sdp_id() const override { return sdp_id_; }
+  void sdp_id(const std::string& id) override { sdp_id_ = id; }
+
   MediaStreamTrackInterface::TrackState state() const override {
     return state_;
   }
@@ -56,6 +62,7 @@ class MediaStreamTrack : public Notifier<T> {
  private:
   bool enabled_;
   const std::string id_;
+  std::string sdp_id_;
   MediaStreamTrackInterface::TrackState state_;
 };
 

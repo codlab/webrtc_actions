@@ -1971,8 +1971,11 @@ void SdpOfferAnswerHandler::ApplyRemoteDescriptionUpdateTransceiverState(
       if (!media_desc->streams().empty()) {
         // The remote description has signaled the stream IDs.
         stream_ids = media_desc->streams()[0].stream_ids();
-      }
 
+        // CCS-2143: In the video track interface set the track id which matches
+        // what is in the SDP.
+        transceiver->receiver()->track()->sdp_id(media_desc->streams()[0].id);
+      }
       RTC_LOG(LS_INFO) << "Processing the MSIDs for MID=" << content->name
                        << " (" << GetStreamIdsString(stream_ids) << ").";
       SetAssociatedRemoteStreams(transceiver->receiver_internal(), stream_ids,
