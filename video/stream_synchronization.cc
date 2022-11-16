@@ -16,9 +16,12 @@
 
 #include "rtc_base/logging.h"
 
+#include "dvc/dvc_constants.h"
+
 namespace webrtc {
 
 static const int kMaxChangeMs = 80;
+static const int kMaxTotalAudioDelayMs = dolby_voice_client::webrtc_integration::DVC_MAX_DELTA_DELAY_MS;
 static const int kMaxDeltaDelayMs = 10000;
 static const int kFilterLength = 4;
 // Minimum difference between audio and video to warrant a change.
@@ -154,8 +157,17 @@ bool StreamSynchronization::ComputeDelays(int relative_delay_ms,
   new_audio_delay_ms = std::max(new_audio_delay_ms, audio_delay_.extra_ms);
 
   // Verify we don't go above the maximum allowed audio delay.
-  new_audio_delay_ms =
-      std::min(new_audio_delay_ms, base_target_delay_ms_ + kMaxDeltaDelayMs);
+  if (new_audio_delay_ms > kMaxTotalAudioDelayMs) {
+      if (new_video_delay_ms > 0) {
+        auto audio_needs = new_audio_delay_ms - kMaxTotalAudioDelayMs;
+        auto can_get = std::min(new_video_delay_ms, audio_needs);
+        // This is a hack, the values now can go below base target delay.
+        // It's better this way than to let audio and video desynchronize though.
+        new_audio_delay_ms -= can_get;
+        new_video_delay_ms -= can_get;
+      }
+  }
+  new_audio_delay_ms = std::min(new_audio_delay_ms, kMaxTotalAudioDelayMs);
 
   video_delay_.last_ms = new_video_delay_ms;
   audio_delay_.last_ms = new_audio_delay_ms;
