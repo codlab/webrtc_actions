@@ -15,7 +15,6 @@ if (is_android) {
     if (!build_with_chromium && is_android) {
       public_deps = [
         ":libjingle_peerconnection_jni",
-        ":libjingle_peerconnection_so",
         ":libwebrtc",
         ":native_api",
       ]
@@ -122,27 +121,6 @@ if (is_android) {
       ":video_jni",
       "../../api:create_peerconnection_factory",
     ]
-  }
-
-  rtc_shared_library("libjingle_peerconnection_so") {
-    sources = [ "src/jni/jni_onload.cc" ]
-
-    suppressed_configs += [ "//build/config/android:hide_all_but_jni_onload" ]
-    configs += [ "//build/config/android:hide_all_but_jni" ]
-    ldflags = [
-      "-lEGL",
-      "-Wl,--build-id",
-    ]
-
-    deps = [
-      ":libjingle_peerconnection_jni",
-      ":libjingle_peerconnection_metrics_default_jni",
-      ":native_api_jni",
-      ":video_egl_jni",
-      "../../pc:libjingle_peerconnection",
-      "../../rtc_base",
-    ]
-    output_extension = "so"
   }
 
   #######################
