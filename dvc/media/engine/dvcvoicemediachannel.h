@@ -14,7 +14,12 @@ namespace dolby_voice_client {
 namespace webrtc_integration {
 
 class DvcVoiceMediaChannel : public cricket::WebRtcVoiceMediaChannel {
- public:
+public:
+  enum Status {
+    READY,
+    CLOSED
+  };
+
   DvcVoiceMediaChannel(cricket::WebRtcVoiceEngine* engine,
                        const cricket::MediaConfig& config,
                        const cricket::AudioOptions& options,
@@ -28,7 +33,6 @@ class DvcVoiceMediaChannel : public cricket::WebRtcVoiceMediaChannel {
 
   bool SetMinimumPlayoutDelay(int delay_ms);
   uint32_t GetPlayoutDelay() const;
-  void SetAudioPacketHandler(AudioPacketHandler* client);
   AudioPacketHandler* GetAudioPacketHandler() const;
   bool GetPacketsToSend(std::vector<AudioBuffer>& packets);
   void SetInputMute(bool mute);
@@ -42,9 +46,11 @@ class DvcVoiceMediaChannel : public cricket::WebRtcVoiceMediaChannel {
     return const_cast<DvcVoiceMediaChannel*>(this);
   }
 
-  sigslot::signal2<DvcVoiceMediaChannel*, bool> SignalReadyToSend;
+  bool SetExternalPacketHandler(AudioPacketHandler* client) override;
 
- protected:
+  sigslot::signal1<Status> SignalStatusUpdate;
+
+protected:
   mutable std::mutex mutex_;
   AudioPacketHandler* _audio_packet_handler = nullptr;
   int64_t _last_audio_session_stats_log_ms = -1;
@@ -52,6 +58,8 @@ class DvcVoiceMediaChannel : public cricket::WebRtcVoiceMediaChannel {
   bool is_muted_ = false;
   uint32_t min_playout_delay_ = 0;
   std::atomic<bool> ready_to_send_{};
+private:
+  void SetAudioPacketHandler(AudioPacketHandler* client);
 };
 
 }  // namespace webrtc_integration

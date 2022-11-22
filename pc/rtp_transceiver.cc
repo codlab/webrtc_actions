@@ -276,6 +276,8 @@ void RtpTransceiver::SetChannel(
   // avoids synchronization for accessing the pointer or network related state.
   context()->network_thread()->Invoke<void>(RTC_FROM_HERE, [&]() {
     if (channel_) {
+      RTC_DCHECK_NOTREACHED();
+      channel_->SetExternalPacketHandler(nullptr);
       channel_->SetFirstPacketReceivedCallback(nullptr);
       channel_->SetRtpTransport(nullptr);
       channel_to_delete = std::move(channel_);
@@ -283,6 +285,7 @@ void RtpTransceiver::SetChannel(
 
     channel_ = std::move(channel);
 
+    // External packet handler set by DvcPeerConnection class.
     channel_->SetRtpTransport(transport_lookup(channel_->mid()));
     channel_->SetFirstPacketReceivedCallback(
         [thread = thread_, flag = signaling_thread_safety_, this]() mutable {
@@ -312,6 +315,7 @@ void RtpTransceiver::ClearChannel() {
 
   context()->network_thread()->Invoke<void>(RTC_FROM_HERE, [&]() {
     if (channel_) {
+      channel_->SetExternalPacketHandler(nullptr);
       channel_->SetFirstPacketReceivedCallback(nullptr);
       channel_->SetRtpTransport(nullptr);
       channel_to_delete = std::move(channel_);

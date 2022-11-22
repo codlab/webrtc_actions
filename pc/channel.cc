@@ -935,6 +935,14 @@ bool VoiceChannel::SetRemoteContent_w(const MediaContentDescription* content,
   return UpdateRemoteStreams_w(content, type, error_desc);
 }
 
+bool VoiceChannel::SetExternalPacketHandler(
+    dolby_voice_client::webrtc_integration::AudioPacketHandler* handler) {
+  TRACE_EVENT0("webrtc", "VoiceChannel::SetExternalPacketHandler");
+  RTC_DCHECK_RUN_ON(network_thread());
+  RTC_DCHECK(media_channel());
+  return media_channel()->SetExternalPacketHandler(handler);
+}
+
 VideoChannel::VideoChannel(rtc::Thread* worker_thread,
                            rtc::Thread* network_thread,
                            rtc::Thread* signaling_thread,

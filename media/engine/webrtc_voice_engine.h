@@ -32,6 +32,12 @@
 #include "rtc_base/network_route.h"
 #include "rtc_base/task_queue.h"
 
+namespace dolby_voice_client {
+namespace webrtc_integration {
+class AudioPacketHandler;
+}
+}
+
 namespace webrtc {
 class AudioFrameProcessor;
 }
@@ -237,6 +243,11 @@ class WebRtcVoiceMediaChannel : public VoiceMediaChannel,
                const webrtc::PacketOptions& options) override;
 
   bool SendRtcp(const uint8_t* data, size_t len) override;
+
+  bool SetExternalPacketHandler(
+      dolby_voice_client::webrtc_integration::AudioPacketHandler*) override {
+    return true;
+  } 
 
  private:
   bool SetOptions(const AudioOptions& options);

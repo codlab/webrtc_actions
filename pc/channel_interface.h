@@ -21,6 +21,12 @@
 #include "media/base/media_channel.h"
 #include "pc/rtp_transport_internal.h"
 
+namespace dolby_voice_client {
+namespace webrtc_integration {
+class AudioPacketHandler;
+}
+}
+
 namespace webrtc {
 class Call;
 class VideoBitrateAllocatorFactory;
@@ -88,6 +94,9 @@ class ChannelInterface {
   //   * An SrtpTransport for SDES.
   //   * A DtlsSrtpTransport for DTLS-SRTP.
   virtual bool SetRtpTransport(webrtc::RtpTransportInternal* rtp_transport) = 0;
+
+  virtual bool SetExternalPacketHandler(
+      dolby_voice_client::webrtc_integration::AudioPacketHandler* handler) = 0;
 };
 
 }  // namespace cricket

@@ -54,6 +54,12 @@
 #include "rtc_base/string_encode.h"
 #include "rtc_base/strings/string_builder.h"
 
+namespace dolby_voice_client {
+namespace webrtc_integration {
+class AudioPacketHandler;
+}
+}
+
 namespace rtc {
 class Timing;
 }
@@ -846,6 +852,9 @@ class VoiceMediaChannel : public MediaChannel, public Delayable {
       std::unique_ptr<webrtc::AudioSinkInterface> sink) = 0;
 
   virtual std::vector<webrtc::RtpSource> GetSources(uint32_t ssrc) const = 0;
+
+  virtual bool SetExternalPacketHandler(
+      dolby_voice_client::webrtc_integration::AudioPacketHandler* client) = 0;
 };
 
 // TODO(deadbeef): Rename to VideoSenderParameters, since they're intended to
@@ -922,6 +931,11 @@ class VideoMediaChannel : public MediaChannel, public Delayable {
   virtual void GenerateKeyFrame(uint32_t ssrc) = 0;
 
   virtual std::vector<webrtc::RtpSource> GetSources(uint32_t ssrc) const = 0;
+
+  virtual bool SetExternalPacketHandler(
+      dolby_voice_client::webrtc_integration::AudioPacketHandler* client) {
+    return true;
+  }
 };
 
 // Info about data received in DataMediaChannel.  For use in

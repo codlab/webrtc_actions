@@ -380,6 +380,9 @@ class VoiceChannel : public BaseChannel {
     return cricket::MEDIA_TYPE_AUDIO;
   }
 
+  bool SetExternalPacketHandler(
+      dolby_voice_client::webrtc_integration::AudioPacketHandler* handler) override;
+
   // Last AudioSendParameters sent down to the media_channel() via
   // SetSendParameters.
   AudioSendParameters last_send_params_ RTC_GUARDED_BY(worker_thread());
@@ -426,6 +429,10 @@ class VideoChannel : public BaseChannel {
     return cricket::MEDIA_TYPE_VIDEO;
   }
 
+  bool SetExternalPacketHandler(
+      dolby_voice_client::webrtc_integration::AudioPacketHandler*) override {
+    return true;
+  }
  private:
   // overrides from BaseChannel
   void UpdateMediaSendRecvState_w() RTC_RUN_ON(worker_thread()) override;
