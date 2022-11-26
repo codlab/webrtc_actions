@@ -1,0 +1,10 @@
+
+
+#<---------------------------------------------------------------------------------
+if (is_android) {
+  use_custom_libcxx = false
+  export_libcxxabi_from_executables = false
+  libcxx_prefix = "//third_party/android_ndk/sources/cxx-stl/llvm-libc++"
+  libcxxabi_prefix = "//third_party/android_ndk/sources/cxx-stl/llvm-libc++abi"
+}
+#<---------------------------------------------------------------------------------

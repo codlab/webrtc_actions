@@ -72,3 +72,5 @@
 !webrtc/*
 /out_ios_libs
 .buildconfig.user.bat
+
+tmp/
