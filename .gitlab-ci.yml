@@ -9,11 +9,16 @@ variables:
 
   META_FILE: "package.info"
   ENV_FILE: "build.env"
-
+ 
   WEBRTC_IOS: "/opt/googlesource/webrtc_ios/branch-heads/5195" # fullfil proper revision. E.g. number=5195
+  WEBRTC_ANDROID: "/opt/googlesource/webrtc_android/branch-heads/5195"
   WEBRTC_WIN: "C:\\googlesource\\webrtc\\branch-heads\\<number>"
 
   VOX_WEBRTC_S3_ROOT_URL: "s3://vox-webrtc"
+
+# Android docker configuration
+.android-docker:
+  image: 836782323787.dkr.ecr.us-east-1.amazonaws.com/android:android-webrtc-openjdk8u252-1
 
 # Define gitlab runners on local build servers.
 .capi_ios_runner_tags:
@@ -30,15 +35,22 @@ variables:
     - mac64
   timeout: 3h
 
+.capi_android_runner_tags:
+  tags:
+    - ubuntu
+    - webrtc
+
+  timeout: 6h
+
 .check_if_package_was_built: &check_if_package_was_built
   - export AWS_ACCESS_KEY_ID="${AWS_ACCESS_KEY_ID_PROD}"
   - export AWS_SECRET_ACCESS_KEY="${AWS_SECRET_ACCESS_KEY_PROD}"
   - ${CI_PROJECT_DIR}/cicd/s3_package_finder.sh || exit 0 # If package exists on S3, finish job.
 
-.setup_webrtc_repository: &setup_webrtc_repository
+.setup_webrtc_repository_ios: &setup_webrtc_repository_ios
   - export PATH="${PATH}:/opt/googlesource/depot_tools"
-  - if [[ -d ${WEBRTC_IOS} ]]; then echo "Getting fresh repository from local cache ${WEBRTC_IOS}"; else exit 1; fi
-  - mkdir ${CI_PROJECT_DIR}/src/ && rsync -aS ${WEBRTC_IOS}/. ${CI_PROJECT_DIR}/src/. && cp ${WEBRTC_IOS}/../../.gclient* ${CI_PROJECT_DIR}/
+  - if [[ -d ${WEBRTC_CACHE} ]]; then echo "Getting fresh repository from local cache ${WEBRTC_CACHE}"; else exit 1; fi
+  - mkdir ${CI_PROJECT_DIR}/src/ && rsync -aS ${WEBRTC_CACHE}/. ${CI_PROJECT_DIR}/src/. && cp ${WEBRTC_CACHE}/../../.gclient* ${CI_PROJECT_DIR}/
   - cd ${CI_PROJECT_DIR}/src
   - git remote add dolby git@gitlab-sfo.dolby.net:voxeet/cpp/webrtc.git
   - sshpass -p $GIT_SSH_PRIVATE_KEY_PASSPHRASE -P passphrase git fetch --all
@@ -46,10 +58,10 @@ variables:
   - cd ${CI_PROJECT_DIR} && time gclient sync -D
 
 # Run code before_script
-.before_script_local_build_hosts: &before_script_local_build_hosts
+.before_script_local_build_hosts_ios: &before_script_local_build_hosts_ios
   before_script:
     - *check_if_package_was_built
-    - *setup_webrtc_repository
+    - *setup_webrtc_repository_ios
 
 .ios_build:
   stage: build-and-deploy
@@ -58,7 +70,9 @@ variables:
     - merge_requests
   extends:
     - .capi_ios_runner_tags
-    - .before_script_local_build_hosts
+    - .before_script_local_build_hosts_ios
+  variables:
+    WEBRTC_CACHE: ${WEBRTC_IOS}
 
   script:
    - if [[ $CI_JOB_NAME == *"debug"* ]] ; then export EXTRA_ARGS="--build_config debug --extra-gn-args symbol_level=2" ; fi
@@ -114,7 +128,9 @@ iOS_MR_test:
   only: ['merge_requests']
   extends:
     - .capi_ios_runner_tags
-    - .before_script_local_build_hosts
+    - .before_script_local_build_hosts_ios
+  variables:
+    WEBRTC_CACHE: ${WEBRTC_IOS}
   script:
     - time ${CI_PROJECT_DIR}/src/tools_webrtc/ios/build_ios_libs.py
 
@@ -142,3 +158,76 @@ ios_debug:
 # macos64_debug:
 #   extends:
 #     - .macos64_build
+
+.setup_webrtc_repository_android: &setup_webrtc_repository_android
+  - export PATH="${PATH}:/opt/googlesource/depot_tools"
+  #- if [[ -d ${WEBRTC_CACHE} ]]; then echo "Getting fresh repository from local cache ${WEBRTC_CACHE}"; else exit 1; fi
+  #- mkdir ${CI_PROJECT_DIR}/src/ && rsync -aS ${WEBRTC_CACHE}/. ${CI_PROJECT_DIR}/src/. && cp ${WEBRTC_CACHE}/../../.gclient* ${CI_PROJECT_DIR}/
+  #- cd ${CI_PROJECT_DIR}/src
+  - cd ${CI_PROJECT_DIR}
+  - fetch --nohooks webrtc_android
+  - gclient sync -D
+  - cd src
+  - git checkout -b webrtc_105 refs/remotes/branch-heads/5195
+  - git remote add dolby git@gitlab-sfo.dolby.net:voxeet/cpp/webrtc.git
+  - sshpass -p $GIT_SSH_PRIVATE_KEY_PASSPHRASE -P passphrase git fetch --all
+  - git checkout ${CI_COMMIT_SHA}
+  - cd ${CI_PROJECT_DIR} && time gclient sync -D
+
+# Run code before_script
+.before_script_local_build_hosts_android: &before_script_local_build_hosts_android
+  before_script:
+    - *check_if_package_was_built
+    - *setup_webrtc_repository_android
+
+.android_build:
+  stage: build-and-deploy
+  except:
+    refs:
+    - merge_requests
+  extends:
+    - .android-docker
+    - .capi_android_runner_tags
+    - .before_script_local_build_hosts_android
+  variables:
+    WEBRTC_CACHE: ${WEBRTC_ANDROID}
+  script:
+    - bash ./patches/android.sh ${CI_PROJECT_DIR}/src
+    - bash ${CI_PROJECT_DIR}/cicd/build_android.sh
+    - ${CI_PROJECT_DIR}/cicd/create_meta_file.sh
+    - source ${CI_PROJECT_DIR}/${ENV_FILE}
+    - bash ${CI_PROJECT_DIR}/cicd/build_android_bundle_out.sh
+    - aws s3 cp --quiet ${CI_PROJECT_DIR}/${ARTIFACT_ZIP_PACKAGE} "${VOX_WEBRTC_S3_ROOT_URL}/android/snapshots/" --acl "private" --quiet || echo "Error uploading ${ARTIFACT_ZIP_PACKAGE}"
+    - aws s3 ls ${VOX_WEBRTC_S3_ROOT_URL}/android/snapshots/
+    - echo -e "Package link \n https://vox-webrtc.s3.amazonaws.com/android/snapshots/${ARTIFACT_ZIP_PACKAGE}"
+  artifacts:
+    paths:
+      - artifacts
+
+android_release:
+  extends:
+    - .android_build
+
+android_debug:
+  extends:
+    - .android_build
+
+
+#Android_MR_test:
+#  stage: build
+#  variables:
+#    APK_FLAVOR: "assembleEnv_stagingRelease"
+#  only: ['merge_requests']
+#  extends:
+#    - .capi_android_runner_tags
+#    - .before_script_local_build_hosts_android
+#  variables:
+#    WEBRTC_CACHE: ${WEBRTC_ANDROID}
+#  script:
+#    # compiling only arm64-v8a for MR purposes...
+#    - bash ./patches/android.sh ${CI_PROJECT_DIR}/src
+#    - cd ${CI_PROJECT_DIR}/src
+#    - gn gen out/arm64-v8a/Release --args="target_os=\"android\" target_cpu=\"arm64\" is_debug=false use_rtti=true"
+#    - ninja -C out/arm64-v8a/Release webrtc metrics
+
+
