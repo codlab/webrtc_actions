@@ -170,7 +170,13 @@ ios_debug:
   - cd src
   - git checkout -b webrtc_105 refs/remotes/branch-heads/5195
   - git remote add dolby git@gitlab-sfo.dolby.net:voxeet/cpp/webrtc.git
-  - sshpass -p $GIT_SSH_PRIVATE_KEY_PASSPHRASE -P passphrase git fetch --all
+  - git config --global user.name ${GL_SA_NAME}
+  - git config --global user.email ${GL_SA_EMAIL}
+  - chmod 600 ${GL_SA_SSH_PRIV_KEY}
+  - export GIT_SSH_COMMAND="ssh -v -i ${GL_SA_SSH_PRIV_KEY} -o StrictHostKeyChecking=no"
+  - mkdir /root/.ssh/
+  - ssh-keyscan gitlab-sfo.dolby.net >> ~/.ssh/known_hosts
+  - git fetch --all
   - git checkout ${CI_COMMIT_SHA}
   - cd ${CI_PROJECT_DIR} && time gclient sync -D
 
