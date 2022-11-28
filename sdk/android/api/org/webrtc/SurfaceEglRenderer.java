@@ -47,7 +47,7 @@ public class SurfaceEglRenderer extends EglRenderer implements SurfaceHolder.Cal
    * `drawer`. It is allowed to call init() to reinitialize the renderer after a previous
    * init()/release() cycle.
    */
-  public void init(final EglBase.Context sharedContext,
+  public void init(final EglBaseInteracts.Context sharedContext,
       RendererCommon.RendererEvents rendererEvents, final int[] configAttributes,
       RendererCommon.GlDrawer drawer) {
     ThreadUtils.checkIsOnMainThread();
@@ -62,7 +62,7 @@ public class SurfaceEglRenderer extends EglRenderer implements SurfaceHolder.Cal
   }
 
   @Override
-  public void init(final EglBase.Context sharedContext, final int[] configAttributes,
+  public void init(final EglBaseInteracts.Context sharedContext, final int[] configAttributes,
       RendererCommon.GlDrawer drawer) {
     init(sharedContext, null /* rendererEvents */, configAttributes, drawer);
   }

@@ -186,6 +186,7 @@ if (is_android) {
   rtc_android_library("video_java") {
     visibility = [ "*" ]
     sources = [
+      "api/org/webrtc/EglBaseInteracts.java",
       "api/org/webrtc/EglBase.java",
       "api/org/webrtc/EglBase10.java",
       "api/org/webrtc/EglBase14.java",
@@ -337,13 +338,17 @@ if (is_android) {
     sources = [
       "api/org/webrtc/DefaultVideoDecoderFactory.java",
       "api/org/webrtc/DefaultVideoEncoderFactory.java",
+      #"api/org/webrtc/HardwareVideoDecoderFactory.java",
+      #"api/org/webrtc/HardwareVideoEncoderFactory.java",
     ]
 
     deps = [
+      #":base_java",
       ":hwcodecs_java",
       ":swcodecs_java",
       ":video_api_java",
       ":video_java",
+      #"//rtc_base:base_java",
       "//third_party/androidx:androidx_annotation_annotation_java",
     ]
   }
@@ -368,6 +373,9 @@ if (is_android) {
     sources = [
       "api/org/webrtc/HardwareVideoDecoderFactory.java",
       "api/org/webrtc/HardwareVideoEncoderFactory.java",
+      "src/java/org/webrtc/CodecDescriptorFactory.java",       #<----- CodecDescriptorFactory
+      "src/java/org/webrtc/codecs/CodecDescriptor.java",       #       
+      "src/java/org/webrtc/codecs/CodecDescriptorHolder.java", #-----> CodecDescriptorFactory
       "api/org/webrtc/PlatformSoftwareVideoDecoderFactory.java",
       "src/java/org/webrtc/AndroidVideoDecoder.java",
       "src/java/org/webrtc/BaseBitrateAdjuster.java",
@@ -376,6 +384,7 @@ if (is_android) {
       "src/java/org/webrtc/FramerateBitrateAdjuster.java",
       "src/java/org/webrtc/HardwareVideoEncoder.java",
       "src/java/org/webrtc/MediaCodecUtils.java",
+      "src/java/org/webrtc/MediaCodecVideoHelperFactory.java",
       "src/java/org/webrtc/MediaCodecVideoDecoderFactory.java",
       "src/java/org/webrtc/MediaCodecWrapper.java",
       "src/java/org/webrtc/MediaCodecWrapperFactory.java",
@@ -698,6 +707,8 @@ if (current_os == "linux" || is_android) {
     # considered public and are subject to change.
     visibility = [ "*" ]
 
+    allow_poison = [ "audio_codecs", "software_video_codecs" ]
+
     sources = [
       "src/jni/pc/add_ice_candidate_observer.cc",
       "src/jni/pc/add_ice_candidate_observer.h",
@@ -805,6 +816,7 @@ if (current_os == "linux" || is_android) {
 
   rtc_library("libjingle_peerconnection_metrics_default_jni") {
     visibility = [ "*" ]
+    allow_poison = [ "audio_codecs", "software_video_codecs" ]
     sources = [ "src/jni/android_metrics.cc" ]
     deps = [
       ":base_jni",
@@ -890,6 +902,7 @@ if (current_os == "linux" || is_android) {
     visibility = [ "*" ]
     allow_poison = [ "software_video_codecs" ]
     deps = [
+      ":libaom_av1_encoder_jni",
       ":libaom_av1_decoder_if_supported_jni",
       ":libvpx_vp8_jni",
       ":libvpx_vp9_jni",
@@ -1011,6 +1024,7 @@ if (current_os == "linux" || is_android) {
   # API for creating Java PeerConnectionFactory from C++ equivalents.
   rtc_library("native_api_peerconnection") {
     visibility = [ "*" ]
+    allow_poison = [ "audio_codecs", "software_video_codecs" ]
     sources = [
       "native_api/peerconnection/peer_connection_factory.cc",
       "native_api/peerconnection/peer_connection_factory.h",

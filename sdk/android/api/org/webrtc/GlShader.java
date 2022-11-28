@@ -114,7 +114,7 @@ public class GlShader {
     if (program == -1) {
       throw new RuntimeException("The program has been released");
     }
-    synchronized (EglBase.lock) {
+    synchronized (EglBaseInteracts.lock) {
       GLES20.glUseProgram(program);
     }
     GlUtil.checkNoGLES2Error("glUseProgram");

@@ -240,6 +240,7 @@ class HardwareVideoEncoder implements VideoEncoder {
       codec = mediaCodecWrapperFactory.createByCodecName(codecName);
     } catch (IOException | IllegalArgumentException e) {
       Logging.e(TAG, "Cannot create media encoder " + codecName);
+      MediaCodecVideoHelperFactory.onHardwareEncoderInitFailed(e);
       return VideoCodecStatus.FALLBACK_SOFTWARE;
     }
 
@@ -273,7 +274,7 @@ class HardwareVideoEncoder implements VideoEncoder {
           format, null /* surface */, null /* crypto */, MediaCodec.CONFIGURE_FLAG_ENCODE);
 
       if (useSurfaceMode) {
-        textureEglBase = EglBase.createEgl14(sharedContext, EglBase.CONFIG_RECORDABLE);
+        textureEglBase = EglBaseInteracts.createEgl14(sharedContext, EglBaseInteracts.CONFIG_RECORDABLE);
         textureInputSurface = codec.createInputSurface();
         textureEglBase.createSurface(textureInputSurface);
         textureEglBase.makeCurrent();
@@ -286,6 +287,12 @@ class HardwareVideoEncoder implements VideoEncoder {
       codec.start();
     } catch (IllegalStateException e) {
       Logging.e(TAG, "initEncodeInternal failed", e);
+      MediaCodecVideoHelperFactory.onHardwareEncoderInitFailed(e);
+      release();
+      return VideoCodecStatus.FALLBACK_SOFTWARE;
+    } catch(RuntimeException runtimeException) {
+      Logging.e(TAG, "initEncodeInternal failed with runtime exception", runtimeException);
+      MediaCodecVideoHelperFactory.onHardwareEncoderInitFailed(runtimeException);
       release();
       return VideoCodecStatus.FALLBACK_SOFTWARE;
     }

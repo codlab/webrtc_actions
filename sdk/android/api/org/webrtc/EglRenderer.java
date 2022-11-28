@@ -205,7 +205,7 @@ public class EglRenderer implements VideoSink {
    * set with the frame timestamps, which specifies desired presentation time and might be useful
    * for e.g. syncing audio and video.
    */
-  public void init(@Nullable final EglBase.Context sharedContext, final int[] configAttributes,
+  public void init(@Nullable final EglBaseInteracts.Context sharedContext, final int[] configAttributes,
       RendererCommon.GlDrawer drawer, boolean usePresentationTimeStamp) {
     synchronized (handlerLock) {
       if (renderThreadHandler != null) {
@@ -234,11 +234,11 @@ public class EglRenderer implements VideoSink {
         // devices that might not be fully spec compliant, so force EGL 1.0 since EGL 1.4 has
         // caused trouble on some weird devices.
         if (sharedContext == null) {
-          logD("EglBase10.create context");
-          eglBase = EglBase.createEgl10(configAttributes);
+          logD("EglBaseInteracts.create context");
+          eglBase = EglBaseInteracts.createEgl10(configAttributes);
         } else {
-          logD("EglBase.create shared context");
-          eglBase = EglBase.create(sharedContext, configAttributes);
+          logD("EglBaseInteracts.create shared context");
+          eglBase = EglBaseInteracts.create(sharedContext, configAttributes);
         }
       });
       renderThreadHandler.post(eglSurfaceCreationRunnable);
@@ -252,9 +252,9 @@ public class EglRenderer implements VideoSink {
   /**
    * Same as above with usePresentationTimeStamp set to false.
    *
-   * @see #init(EglBase.Context, int[], RendererCommon.GlDrawer, boolean)
+   * @see #init(EglBaseInteracts.Context, int[], RendererCommon.GlDrawer, boolean)
    */
-  public void init(@Nullable final EglBase.Context sharedContext, final int[] configAttributes,
+  public void init(@Nullable final EglBaseInteracts.Context sharedContext, final int[] configAttributes,
       RendererCommon.GlDrawer drawer) {
     init(sharedContext, configAttributes, drawer, /* usePresentationTimeStamp= */ false);
   }
@@ -290,7 +290,7 @@ public class EglRenderer implements VideoSink {
       // Release EGL and GL resources on render thread.
       renderThreadHandler.postAtFrontOfQueue(() -> {
         // Detach current shader program.
-        synchronized (EglBase.lock) {
+        synchronized (EglBaseInteracts.lock) {
           GLES20.glUseProgram(/* program= */ 0);
         }
         if (drawer != null) {
@@ -439,7 +439,7 @@ public class EglRenderer implements VideoSink {
    *                 It should be lightweight and must not call removeFrameListener.
    * @param scale    The scale of the Bitmap passed to the callback, or 0 if no Bitmap is
    *                 required.
-   * @param drawer   Custom drawer to use for this frame listener or null to use the default one.
+   * @param drawerParam   Custom drawer to use for this frame listener or null to use the default one.
    */
   public void addFrameListener(
       final FrameListener listener, final float scale, final RendererCommon.GlDrawer drawerParam) {
@@ -453,7 +453,7 @@ public class EglRenderer implements VideoSink {
    *                 It should be lightweight and must not call removeFrameListener.
    * @param scale    The scale of the Bitmap passed to the callback, or 0 if no Bitmap is
    *                 required.
-   * @param drawer   Custom drawer to use for this frame listener or null to use the default one.
+   * @param drawerParam   Custom drawer to use for this frame listener or null to use the default one.
    * @param applyFpsReduction This callback will not be called for frames that have been dropped by
    *                          FPS reduction.
    */
@@ -471,7 +471,7 @@ public class EglRenderer implements VideoSink {
    * the queue, nothing happens. It is ensured that callback won't be called after this method
    * returns.
    *
-   * @param runnable The callback to remove.
+   * @param listener The callback to remove.
    */
   public void removeFrameListener(final FrameListener listener) {
     final CountDownLatch latch = new CountDownLatch(1);

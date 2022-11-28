@@ -35,7 +35,7 @@ public class PeerConnection {
     GATHERING,
     COMPLETE;
 
-    @CalledByNative("IceGatheringState")
+    @Nullable @CalledByNative("IceGatheringState")
     static IceGatheringState fromNativeIndex(int nativeIndex) {
       return values()[nativeIndex];
     }

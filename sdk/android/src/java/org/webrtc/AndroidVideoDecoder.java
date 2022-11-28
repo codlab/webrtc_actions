@@ -102,7 +102,7 @@ class AndroidVideoDecoder implements VideoDecoder, VideoSink {
   // on the decoder thread.
   private boolean keyFrameRequired;
 
-  private final @Nullable EglBase.Context sharedContext;
+  private final @Nullable EglBaseInteracts.Context sharedContext;
   // Valid and immutable while the decoder is running.
   @Nullable private SurfaceTextureHelper surfaceTextureHelper;
   @Nullable private Surface surface;
@@ -129,7 +129,7 @@ class AndroidVideoDecoder implements VideoDecoder, VideoSink {
   @Nullable private MediaCodecWrapper codec;
 
   AndroidVideoDecoder(MediaCodecWrapperFactory mediaCodecWrapperFactory, String codecName,
-      VideoCodecMimeType codecType, int colorFormat, @Nullable EglBase.Context sharedContext) {
+      VideoCodecMimeType codecType, int colorFormat, @Nullable EglBaseInteracts.Context sharedContext) {
     if (!isSupportedColorFormat(colorFormat)) {
       throw new IllegalArgumentException("Unsupported color format: " + colorFormat);
     }

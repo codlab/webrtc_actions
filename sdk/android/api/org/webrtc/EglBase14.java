@@ -14,7 +14,7 @@ import android.opengl.EGLContext;
 
 /** EGL 1.4 implementation of EglBase. */
 public interface EglBase14 extends EglBase {
-  interface Context extends EglBase.Context {
+  interface Context extends EglBaseInteracts.Context {
     EGLContext getRawContext();
   }
 }

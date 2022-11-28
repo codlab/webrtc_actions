@@ -30,10 +30,21 @@ import org.webrtc.EglBase;
 @SuppressWarnings("ReferenceEquality") // We want to compare to EGL14 constants.
 class EglBase14Impl implements EglBase14 {
   private static final String TAG = "EglBase14Impl";
+  private static final int EGLExt_SDK_VERSION = Build.VERSION_CODES.JELLY_BEAN_MR2;
+  private static final int CURRENT_SDK_VERSION = Build.VERSION.SDK_INT;
   private EGLContext eglContext;
   @Nullable private EGLConfig eglConfig;
   private EGLDisplay eglDisplay;
   private EGLSurface eglSurface = EGL14.EGL_NO_SURFACE;
+
+  // EGL 1.4 is supported from API 17. But EGLExt that is used for setting presentation
+  // time stamp on a surface is supported from 18 so we require 18.
+  public static boolean isEGL14Supported() {
+    Logging.d(TAG,
+            "SDK version: " + CURRENT_SDK_VERSION
+                    + ". isEGL14Supported: " + (CURRENT_SDK_VERSION >= EGLExt_SDK_VERSION));
+    return (CURRENT_SDK_VERSION >= EGLExt_SDK_VERSION);
+  }
 
   public static class Context implements EglBase14.Context {
     private final EGLContext egl14Context;
@@ -58,7 +69,7 @@ class EglBase14Impl implements EglBase14 {
   public EglBase14Impl(EGLContext sharedContext, int[] configAttributes) {
     eglDisplay = getEglDisplay();
     eglConfig = getEglConfig(eglDisplay, configAttributes);
-    final int openGlesVersion = EglBase.getOpenGlesVersionFromConfig(configAttributes);
+    final int openGlesVersion = EglBaseInteracts.getOpenGlesVersionFromConfig(configAttributes);
     Logging.d(TAG, "Using OpenGL ES version " + openGlesVersion);
     eglContext = createEglContext(sharedContext, eglDisplay, eglConfig, openGlesVersion);
   }
@@ -156,7 +167,7 @@ class EglBase14Impl implements EglBase14 {
     checkIsNotReleased();
     releaseSurface();
     detachCurrent();
-    synchronized (EglBase.lock) {
+    synchronized (EglBaseInteracts.lock) {
       EGL14.eglDestroyContext(eglDisplay, eglContext);
     }
     EGL14.eglReleaseThread();
@@ -172,7 +183,7 @@ class EglBase14Impl implements EglBase14 {
     if (eglSurface == EGL14.EGL_NO_SURFACE) {
       throw new RuntimeException("No EGLSurface - can't make current");
     }
-    synchronized (EglBase.lock) {
+    synchronized (EglBaseInteracts.lock) {
       if (!EGL14.eglMakeCurrent(eglDisplay, eglSurface, eglSurface, eglContext)) {
         throw new GLException(EGL14.eglGetError(),
             "eglMakeCurrent failed: 0x" + Integer.toHexString(EGL14.eglGetError()));
@@ -183,7 +194,7 @@ class EglBase14Impl implements EglBase14 {
   // Detach the current EGL context, so that it can be made current on another thread.
   @Override
   public void detachCurrent() {
-    synchronized (EglBase.lock) {
+    synchronized (EglBaseInteracts.lock) {
       if (!EGL14.eglMakeCurrent(
               eglDisplay, EGL14.EGL_NO_SURFACE, EGL14.EGL_NO_SURFACE, EGL14.EGL_NO_CONTEXT)) {
         throw new GLException(EGL14.eglGetError(),
@@ -198,7 +209,7 @@ class EglBase14Impl implements EglBase14 {
     if (eglSurface == EGL14.EGL_NO_SURFACE) {
       throw new RuntimeException("No EGLSurface - can't swap buffers");
     }
-    synchronized (EglBase.lock) {
+    synchronized (EglBaseInteracts.lock) {
       EGL14.eglSwapBuffers(eglDisplay, eglSurface);
     }
   }
@@ -209,7 +220,7 @@ class EglBase14Impl implements EglBase14 {
     if (eglSurface == EGL14.EGL_NO_SURFACE) {
       throw new RuntimeException("No EGLSurface - can't swap buffers");
     }
-    synchronized (EglBase.lock) {
+    synchronized (EglBaseInteracts.lock) {
       // See
       // https://android.googlesource.com/platform/frameworks/native/+/tools_r22.2/opengl/specs/EGL_ANDROID_presentation_time.txt
       EGLExt.eglPresentationTimeANDROID(eglDisplay, eglSurface, timeStampNs);
@@ -260,7 +271,7 @@ class EglBase14Impl implements EglBase14 {
     int[] contextAttributes = {EGL14.EGL_CONTEXT_CLIENT_VERSION, openGlesVersion, EGL14.EGL_NONE};
     EGLContext rootContext = sharedContext == null ? EGL14.EGL_NO_CONTEXT : sharedContext;
     final EGLContext eglContext;
-    synchronized (EglBase.lock) {
+    synchronized (EglBaseInteracts.lock) {
       eglContext = EGL14.eglCreateContext(eglDisplay, eglConfig, rootContext, contextAttributes, 0);
     }
     if (eglContext == EGL14.EGL_NO_CONTEXT) {

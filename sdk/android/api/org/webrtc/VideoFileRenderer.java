@@ -39,7 +39,7 @@ public class VideoFileRenderer implements VideoSink {
   private int frameCount;
 
   public VideoFileRenderer(String outputFile, int outputFileWidth, int outputFileHeight,
-      final EglBase.Context sharedContext) throws IOException {
+      final EglBaseInteracts.Context sharedContext) throws IOException {
     if ((outputFileWidth % 2) == 1 || (outputFileHeight % 2) == 1) {
       throw new IllegalArgumentException("Does not support uneven width or height");
     }
@@ -67,7 +67,7 @@ public class VideoFileRenderer implements VideoSink {
     ThreadUtils.invokeAtFrontUninterruptibly(renderThreadHandler, new Runnable() {
       @Override
       public void run() {
-        eglBase = EglBase.create(sharedContext, EglBase.CONFIG_PIXEL_BUFFER);
+        eglBase = EglBaseInteracts.create(sharedContext, EglBaseInteracts.CONFIG_PIXEL_BUFFER);
         eglBase.createDummyPbufferSurface();
         eglBase.makeCurrent();
         yuvConverter = new YuvConverter();

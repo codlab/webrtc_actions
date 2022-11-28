@@ -95,7 +95,7 @@ class EglBase10Impl implements EglBase10 {
     this.egl = (EGL10) EGLContext.getEGL();
     eglDisplay = getEglDisplay();
     eglConfig = getEglConfig(egl, eglDisplay, configAttributes);
-    final int openGlesVersion = EglBase.getOpenGlesVersionFromConfig(configAttributes);
+    final int openGlesVersion = EglBaseInteracts.getOpenGlesVersionFromConfig(configAttributes);
     Logging.d(TAG, "Using OpenGL ES version " + openGlesVersion);
     eglContext = createEglContext(sharedContext, eglDisplay, eglConfig, openGlesVersion);
   }
@@ -216,7 +216,7 @@ class EglBase10Impl implements EglBase10 {
   }
 
   @Override
-  public org.webrtc.EglBase.Context getEglBaseContext() {
+  public org.webrtc.EglBaseInteracts.Context getEglBaseContext() {
     return new Context(egl, eglContext, eglConfig);
   }
 
@@ -272,7 +272,7 @@ class EglBase10Impl implements EglBase10 {
     if (eglSurface == EGL10.EGL_NO_SURFACE) {
       throw new RuntimeException("No EGLSurface - can't make current");
     }
-    synchronized (EglBase.lock) {
+    synchronized (EglBaseInteracts.lock) {
       if (!egl.eglMakeCurrent(eglDisplay, eglSurface, eglSurface, eglContext)) {
         throw new GLException(egl.eglGetError(),
             "eglMakeCurrent failed: 0x" + Integer.toHexString(egl.eglGetError()));
@@ -283,7 +283,7 @@ class EglBase10Impl implements EglBase10 {
   // Detach the current EGL context, so that it can be made current on another thread.
   @Override
   public void detachCurrent() {
-    synchronized (EglBase.lock) {
+    synchronized (EglBaseInteracts.lock) {
       if (!egl.eglMakeCurrent(
               eglDisplay, EGL10.EGL_NO_SURFACE, EGL10.EGL_NO_SURFACE, EGL10.EGL_NO_CONTEXT)) {
         throw new GLException(egl.eglGetError(),
@@ -298,7 +298,7 @@ class EglBase10Impl implements EglBase10 {
     if (eglSurface == EGL10.EGL_NO_SURFACE) {
       throw new RuntimeException("No EGLSurface - can't swap buffers");
     }
-    synchronized (EglBase.lock) {
+    synchronized (EglBaseInteracts.lock) {
       egl.eglSwapBuffers(eglDisplay, eglSurface);
     }
   }
@@ -351,7 +351,7 @@ class EglBase10Impl implements EglBase10 {
     int[] contextAttributes = {EGL_CONTEXT_CLIENT_VERSION, openGlesVersion, EGL10.EGL_NONE};
     EGLContext rootContext = sharedContext == null ? EGL10.EGL_NO_CONTEXT : sharedContext;
     final EGLContext eglContext;
-    synchronized (EglBase.lock) {
+    synchronized (EglBaseInteracts.lock) {
       eglContext = egl.eglCreateContext(eglDisplay, eglConfig, rootContext, contextAttributes);
     }
     if (eglContext == EGL10.EGL_NO_CONTEXT) {

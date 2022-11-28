@@ -10,12 +10,8 @@
 
 package org.webrtc;
 
-import static org.webrtc.MediaCodecUtils.EXYNOS_PREFIX;
-import static org.webrtc.MediaCodecUtils.QCOM_PREFIX;
-
 import android.media.MediaCodecInfo;
 import android.media.MediaCodecInfo.CodecCapabilities;
-import android.media.MediaCodecList;
 import android.os.Build;
 import androidx.annotation.Nullable;
 import java.util.ArrayList;
@@ -26,7 +22,7 @@ import java.util.List;
 class MediaCodecVideoDecoderFactory implements VideoDecoderFactory {
   private static final String TAG = "MediaCodecVideoDecoderFactory";
 
-  private final @Nullable EglBase.Context sharedContext;
+  private final @Nullable EglBaseInteracts.Context sharedContext;
   private final @Nullable Predicate<MediaCodecInfo> codecAllowedPredicate;
 
   /**
@@ -37,7 +33,7 @@ class MediaCodecVideoDecoderFactory implements VideoDecoderFactory {
    * @param codecAllowedPredicate optional predicate to test if codec allowed. All codecs are
    *                              allowed when predicate is not provided.
    */
-  public MediaCodecVideoDecoderFactory(@Nullable EglBase.Context sharedContext,
+  public MediaCodecVideoDecoderFactory(@Nullable EglBaseInteracts.Context sharedContext,
       @Nullable Predicate<MediaCodecInfo> codecAllowedPredicate) {
     this.sharedContext = sharedContext;
     this.codecAllowedPredicate = codecAllowedPredicate;
@@ -83,19 +79,9 @@ class MediaCodecVideoDecoderFactory implements VideoDecoderFactory {
   }
 
   private @Nullable MediaCodecInfo findCodecForType(VideoCodecMimeType type) {
-    for (int i = 0; i < MediaCodecList.getCodecCount(); ++i) {
-      MediaCodecInfo info = null;
-      try {
-        info = MediaCodecList.getCodecInfoAt(i);
-      } catch (IllegalArgumentException e) {
-        Logging.e(TAG, "Cannot retrieve decoder codec info", e);
-      }
-
-      if (info == null || info.isEncoder()) {
-        continue;
-      }
-
-      if (isSupportedCodec(info, type)) {
+    List<MediaCodecInfo> codecs = MediaCodecVideoHelperFactory.getCodecs();
+    for (MediaCodecInfo info: codecs) {
+      if(null != info && !info.isEncoder() && isSupportedCodec(info, type)) {
         return info;
       }
     }
@@ -125,15 +111,6 @@ class MediaCodecVideoDecoderFactory implements VideoDecoderFactory {
   }
 
   private boolean isH264HighProfileSupported(MediaCodecInfo info) {
-    String name = info.getName();
-    // Support H.264 HP decoding on QCOM chips.
-    if (name.startsWith(QCOM_PREFIX)) {
-      return true;
-    }
-    // Support H.264 HP decoding on Exynos chips for Android M and above.
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && name.startsWith(EXYNOS_PREFIX)) {
-      return true;
-    }
-    return false;
+    return CodecDescriptorFactory.getDecoders().isSupported(info);
   }
 }

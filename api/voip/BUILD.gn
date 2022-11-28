@@ -32,6 +32,7 @@ rtc_source_set("voip_api") {
 
 rtc_library("voip_engine_factory") {
   visibility = [ "*" ]
+  allow_poison = [ "audio_codecs" ]
   sources = [
     "voip_engine_factory.cc",
     "voip_engine_factory.h",

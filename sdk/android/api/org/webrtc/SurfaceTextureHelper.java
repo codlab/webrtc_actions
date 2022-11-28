@@ -10,16 +10,13 @@
 
 package org.webrtc;
 
-import android.annotation.TargetApi;
 import android.graphics.SurfaceTexture;
 import android.opengl.GLES11Ext;
 import android.opengl.GLES20;
-import android.os.Build;
 import android.os.Handler;
 import android.os.HandlerThread;
 import androidx.annotation.Nullable;
 import java.util.concurrent.Callable;
-import org.webrtc.EglBase.Context;
 import org.webrtc.TextureBufferImpl.RefCountMonitor;
 import org.webrtc.VideoFrame.TextureBuffer;
 
@@ -57,7 +54,7 @@ public class SurfaceTextureHelper {
    * closer to actual creation time.
    */
   public static SurfaceTextureHelper create(final String threadName,
-      final EglBase.Context sharedContext, boolean alignTimestamps, final YuvConverter yuvConverter,
+      final EglBaseInteracts.Context sharedContext, boolean alignTimestamps, final YuvConverter yuvConverter,
       FrameRefMonitor frameRefMonitor) {
     final HandlerThread thread = new HandlerThread(threadName);
     thread.start();
@@ -85,10 +82,10 @@ public class SurfaceTextureHelper {
   /**
    * Same as above with alignTimestamps set to false and yuvConverter set to new YuvConverter.
    *
-   * @see #create(String, EglBase.Context, boolean, YuvConverter, FrameRefMonitor)
+   * @see #create(String, EglBaseInteracts.Context, boolean, YuvConverter, FrameRefMonitor)
    */
   public static SurfaceTextureHelper create(
-      final String threadName, final EglBase.Context sharedContext) {
+      final String threadName, final EglBaseInteracts.Context sharedContext) {
     return create(threadName, sharedContext, /* alignTimestamps= */ false, new YuvConverter(),
         /*frameRefMonitor=*/null);
   }
@@ -96,10 +93,10 @@ public class SurfaceTextureHelper {
   /**
    * Same as above with yuvConverter set to new YuvConverter.
    *
-   * @see #create(String, EglBase.Context, boolean, YuvConverter, FrameRefMonitor)
+   * @see #create(String, EglBaseInteracts.Context, boolean, YuvConverter, FrameRefMonitor)
    */
   public static SurfaceTextureHelper create(
-      final String threadName, final EglBase.Context sharedContext, boolean alignTimestamps) {
+      final String threadName, final EglBaseInteracts.Context sharedContext, boolean alignTimestamps) {
     return create(
         threadName, sharedContext, alignTimestamps, new YuvConverter(), /*frameRefMonitor=*/null);
   }
@@ -107,10 +104,10 @@ public class SurfaceTextureHelper {
   /**
    * Create a SurfaceTextureHelper without frame ref monitor.
    *
-   * @see #create(String, EglBase.Context, boolean, YuvConverter, FrameRefMonitor)
+   * @see #create(String, EglBaseInteracts.Context, boolean, YuvConverter, FrameRefMonitor)
    */
   public static SurfaceTextureHelper create(final String threadName,
-      final EglBase.Context sharedContext, boolean alignTimestamps, YuvConverter yuvConverter) {
+      final EglBaseInteracts.Context sharedContext, boolean alignTimestamps, YuvConverter yuvConverter) {
     return create(
         threadName, sharedContext, alignTimestamps, yuvConverter, /*frameRefMonitor=*/null);
   }
@@ -174,7 +171,7 @@ public class SurfaceTextureHelper {
     }
   };
 
-  private SurfaceTextureHelper(Context sharedContext, Handler handler, boolean alignTimestamps,
+  private SurfaceTextureHelper(EglBaseInteracts.Context sharedContext, Handler handler, boolean alignTimestamps,
       YuvConverter yuvConverter, FrameRefMonitor frameRefMonitor) {
     if (handler.getLooper().getThread() != Thread.currentThread()) {
       throw new IllegalStateException("SurfaceTextureHelper must be created on the handler thread");
@@ -184,7 +181,7 @@ public class SurfaceTextureHelper {
     this.yuvConverter = yuvConverter;
     this.frameRefMonitor = frameRefMonitor;
 
-    eglBase = EglBase.create(sharedContext, EglBase.CONFIG_PIXEL_BUFFER);
+    eglBase = EglBaseInteracts.create(sharedContext, EglBaseInteracts.CONFIG_PIXEL_BUFFER);
     try {
       // Both these statements have been observed to fail on rare occasions, see BUG=webrtc:5682.
       eglBase.createDummyPbufferSurface();
@@ -330,7 +327,7 @@ public class SurfaceTextureHelper {
     // SurfaceTexture.updateTexImage apparently can compete and deadlock with eglSwapBuffers,
     // as observed on Nexus 5. Therefore, synchronize it with the EGL functions.
     // See https://bugs.chromium.org/p/webrtc/issues/detail?id=5702 for more info.
-    synchronized (EglBase.lock) {
+    synchronized (EglBaseInteracts.lock) {
       surfaceTexture.updateTexImage();
     }
   }

@@ -33,7 +33,7 @@ public class PlatformSoftwareVideoDecoderFactory extends MediaCodecVideoDecoderF
    * @param sharedContext The textures generated will be accessible from this context. May be null,
    *                      this disables texture support.
    */
-  public PlatformSoftwareVideoDecoderFactory(@Nullable EglBase.Context sharedContext) {
+  public PlatformSoftwareVideoDecoderFactory(@Nullable EglBaseInteracts.Context sharedContext) {
     super(sharedContext, defaultAllowedPredicate);
   }
 }
