@@ -117,7 +117,12 @@ class Camera2Session implements CameraSession {
       Logging.d(TAG, "Camera opened.");
       cameraDevice = camera;
 
-      surfaceTextureHelper.setTextureSize(captureFormat.width, captureFormat.height);
+      try {
+        surfaceTextureHelper.setTextureSize(captureFormat.width, captureFormat.height);
+      } catch (NullPointerException e) {
+        reportError("Failed to set texture size. " + e);
+        return;
+      }
       surface = new Surface(surfaceTextureHelper.getSurfaceTexture());
       try {
         camera.createCaptureSession(
@@ -328,7 +333,7 @@ class Camera2Session implements CameraSession {
     fpsUnitFactor = Camera2Enumerator.getFpsUnitFactor(fpsRanges);
     List<CaptureFormat.FramerateRange> framerateRanges =
         Camera2Enumerator.convertFramerates(fpsRanges, fpsUnitFactor);
-    List<Size> sizes = Camera2Enumerator.getSupportedSizes(cameraCharacteristics);
+    List<Size> sizes = Camera2Enumerator.getSupportedSizes(cameraCharacteristics, cameraId);
     Logging.d(TAG, "Available preview sizes: " + sizes);
     Logging.d(TAG, "Available fps ranges: " + framerateRanges);
 

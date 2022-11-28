@@ -68,6 +68,11 @@ public interface CameraVideoCapturer extends VideoCapturer {
   void switchCamera(CameraSwitchHandler switchEventsHandler, String cameraName);
 
   /**
+   * Get camera name
+   */
+  String getCameraName();
+
+  /**
    * MediaRecorder add/remove handler - one of these functions are invoked with the result of
    * addMediaRecorderToCamera() or removeMediaRecorderFromCamera calls.
    * The callback may be called on an arbitrary thread.

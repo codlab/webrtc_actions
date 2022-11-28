@@ -445,7 +445,8 @@ abstract class CameraCapturer implements CameraVideoCapturer {
     }
   }
 
-  protected String getCameraName() {
+  @Override
+  public String getCameraName() {
     synchronized (stateLock) {
       return cameraName;
     }

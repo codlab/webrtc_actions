@@ -21,6 +21,7 @@ import android.os.Build;
 import android.os.SystemClock;
 import android.util.AndroidException;
 import android.util.Range;
+import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -38,25 +39,26 @@ public class Camera2Enumerator implements CameraEnumerator {
   private static final Map<String, List<CaptureFormat>> cachedSupportedFormats =
       new HashMap<String, List<CaptureFormat>>();
 
+  // Each entry contains the supported sizes for a given camera index. The sizes are enumerated
+  // lazily in getSupportedSizes(), and cached for future reference.
+  private static final Map<String, List<Size>> cachedSupportedSizes = new HashMap<>();
+
+  @NonNull private String[] validCameras;
+
   final Context context;
   @Nullable final CameraManager cameraManager;
 
   public Camera2Enumerator(Context context) {
     this.context = context;
     this.cameraManager = (CameraManager) context.getSystemService(Context.CAMERA_SERVICE);
+    this.validCameras = computeFilteredDeviceNames();
   }
 
   @Override
   public String[] getDeviceNames() {
-    try {
-      return cameraManager.getCameraIdList();
-      // On Android OS pre 4.4.2, a class will not load because of VerifyError if it contains a
-      // catch statement with an Exception from a newer API, even if the code is never executed.
-      // https://code.google.com/p/android/issues/detail?id=209129
-    } catch (/* CameraAccessException */ AndroidException e) {
-      Logging.e(TAG, "Camera access exception", e);
-      return new String[] {};
-    }
+    if (validCameras.length > 0) return validCameras;
+    String[] names = getRawDevicesName();
+    return null != names ? names : new String[0];
   }
 
   @Override
@@ -87,6 +89,24 @@ public class Camera2Enumerator implements CameraEnumerator {
   public CameraVideoCapturer createCapturer(
       String deviceName, CameraVideoCapturer.CameraEventsHandler eventsHandler) {
     return new Camera2Capturer(context, deviceName, eventsHandler);
+  }
+
+  /**
+   * Compute the list of usable cameras into the validCameras list
+   */
+  private @NonNull String[] computeFilteredDeviceNames() {
+    if (null == cameraManager) return new String[0];
+
+    String[] devices = getRawDevicesName();
+    ArrayList<String> filtered = new ArrayList();
+
+    for (String device: devices) {
+      if(getSupportedFormats(cameraManager, device).size() > 0) {
+        filtered.add(device);
+      }
+    }
+
+    return filtered.toArray(new String[0]);
   }
 
   private @Nullable CameraCharacteristics getCameraCharacteristics(String deviceName) {
@@ -125,6 +145,22 @@ public class Camera2Enumerator implements CameraEnumerator {
     return true;
   }
 
+  /**
+   * Get the list of system wide accessible cameras
+   * @return the raw list of devices from the camera manager service
+   */
+  private String[] getRawDevicesName() {
+    try {
+      return cameraManager.getCameraIdList();
+      // On Android OS pre 4.4.2, a class will not load because of VerifyError if it contains a
+      // catch statement with an Exception from a newer API, even if the code is never executed.
+      // https://code.google.com/p/android/issues/detail?id=209129
+    } catch (/* CameraAccessException */ AndroidException e) {
+      Logging.e(TAG, "Camera access exception: " + e);
+      return new String[] {};
+    }
+  }
+
   static int getFpsUnitFactor(Range<Integer>[] fpsRanges) {
     if (fpsRanges.length == 0) {
       return 1000;
@@ -132,19 +168,28 @@ public class Camera2Enumerator implements CameraEnumerator {
     return fpsRanges[0].getUpper() < 1000 ? 1000 : 1;
   }
 
-  static List<Size> getSupportedSizes(CameraCharacteristics cameraCharacteristics) {
+  static List<Size> getSupportedSizes(@NonNull CameraCharacteristics cameraCharacteristics, @Nullable String optionalCameraId) {
     final StreamConfigurationMap streamMap =
         cameraCharacteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP);
-    final int supportLevel =
+    final Integer supportLevel =
         cameraCharacteristics.get(CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL);
 
     final android.util.Size[] nativeSizes = streamMap.getOutputSizes(SurfaceTexture.class);
     final List<Size> sizes = convertSizes(nativeSizes);
 
+    if(sizes.size() == 0 && null != optionalCameraId && cachedSupportedSizes.containsKey(optionalCameraId)) {
+      List<Size> cached = cachedSupportedSizes.get(optionalCameraId);
+      if (null != cached) {
+        Logging.d(TAG, "Get supported sizes for camera index " + optionalCameraId + " using cache.");
+
+        return cached;
+      } // else never happen but for safety check, this is mandatory
+    }
+
     // Video may be stretched pre LMR1 on legacy implementations.
     // Filter out formats that have different aspect ratio than the sensor array.
     if (Build.VERSION.SDK_INT < Build.VERSION_CODES.LOLLIPOP_MR1
-        && supportLevel == CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL_LEGACY) {
+          && null != supportLevel && supportLevel == CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL_LEGACY) {
       final Rect activeArraySize =
           cameraCharacteristics.get(CameraCharacteristics.SENSOR_INFO_ACTIVE_ARRAY_SIZE);
       final ArrayList<Size> filteredSizes = new ArrayList<Size>();
@@ -155,8 +200,10 @@ public class Camera2Enumerator implements CameraEnumerator {
         }
       }
 
+      if(null != optionalCameraId) cachedSupportedSizes.put(optionalCameraId, filteredSizes);
       return filteredSizes;
     } else {
+      if(null != optionalCameraId) cachedSupportedSizes.put(optionalCameraId, sizes);
       return sizes;
     }
   }
@@ -171,7 +218,11 @@ public class Camera2Enumerator implements CameraEnumerator {
   static List<CaptureFormat> getSupportedFormats(CameraManager cameraManager, String cameraId) {
     synchronized (cachedSupportedFormats) {
       if (cachedSupportedFormats.containsKey(cameraId)) {
-        return cachedSupportedFormats.get(cameraId);
+        List<CaptureFormat> cached = cachedSupportedFormats.get(cameraId);
+
+        if (null != cached) {
+          return cached;
+        } // else never happen but for safety check, this is mandatory
       }
 
       Logging.d(TAG, "Get supported formats for camera index " + cameraId + ".");
@@ -192,7 +243,7 @@ public class Camera2Enumerator implements CameraEnumerator {
           cameraCharacteristics.get(CameraCharacteristics.CONTROL_AE_AVAILABLE_TARGET_FPS_RANGES);
       List<CaptureFormat.FramerateRange> framerateRanges =
           convertFramerates(fpsRanges, getFpsUnitFactor(fpsRanges));
-      List<Size> sizes = getSupportedSizes(cameraCharacteristics);
+      List<Size> sizes = getSupportedSizes(cameraCharacteristics, cameraId);
 
       int defaultMaxFps = 0;
       for (CaptureFormat.FramerateRange framerateRange : framerateRanges) {
@@ -215,7 +266,11 @@ public class Camera2Enumerator implements CameraEnumerator {
         Logging.d(TAG, "Format: " + size.width + "x" + size.height + "@" + maxFps);
       }
 
-      cachedSupportedFormats.put(cameraId, formatList);
+      //only set the cached format list if required
+      if(formatList.size() > 0) {
+        cachedSupportedFormats.put(cameraId, formatList);
+      }
+
       final long endTimeMs = SystemClock.elapsedRealtime();
       Logging.d(TAG, "Get supported formats for camera index " + cameraId + " done."
               + " Time spent: " + (endTimeMs - startTimeMs) + " ms.");
@@ -229,8 +284,12 @@ public class Camera2Enumerator implements CameraEnumerator {
       return Collections.emptyList();
     }
     final List<Size> sizes = new ArrayList<>(cameraSizes.length);
-    for (android.util.Size size : cameraSizes) {
-      sizes.add(new Size(size.getWidth(), size.getHeight()));
+    try {
+      for (android.util.Size size : cameraSizes) {
+        sizes.add(new Size(size.getWidth(), size.getHeight()));
+      }
+    } catch(Throwable exception) {
+      Logging.e(TAG, "convertSizes exception", exception);
     }
     return sizes;
   }
