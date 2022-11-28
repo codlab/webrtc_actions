@@ -21,6 +21,7 @@ import android.media.AudioTimestamp;
 import android.media.MediaRecorder.AudioSource;
 import android.os.Build;
 import android.os.Process;
+import android.util.Log;
 import androidx.annotation.Nullable;
 import androidx.annotation.RequiresApi;
 import java.lang.System;
@@ -108,6 +109,8 @@ class WebRtcAudioRecord {
   private final boolean isAcousticEchoCancelerSupported;
   private final boolean isNoiseSuppressorSupported;
 
+  public static boolean activated;// = true;
+
   /**
    * Audio thread which keeps calling ByteBuffer.read() waiting for audio
    * to be recorded. Feeds recorded data to the native counterpart as a
@@ -116,16 +119,27 @@ class WebRtcAudioRecord {
    */
   private class AudioRecordThread extends Thread {
     private volatile boolean keepAlive = true;
+    private boolean activated;
 
     public AudioRecordThread(String name) {
       super(name);
+      this.activated = true;
+    }
+
+    public AudioRecordThread(String name, boolean activated) {
+      this(name);
+
+      Log.d("AudioRecordThread", "AudioRecordThread: creating a specific AudioRecordThread :: " + activated);
+      this.activated = activated;
     }
 
     @Override
     public void run() {
       Process.setThreadPriority(Process.THREAD_PRIORITY_URGENT_AUDIO);
       Logging.d(TAG, "AudioRecordThread" + WebRtcAudioUtils.getThreadInfo());
-      assertTrue(audioRecord.getRecordingState() == AudioRecord.RECORDSTATE_RECORDING);
+      if(null != audioRecord) {
+        assertTrue(audioRecord.getRecordingState() == AudioRecord.RECORDSTATE_RECORDING);
+      }
 
       // Audio recording has started and the client is informed about it.
       doAudioRecordStateCallback(AUDIO_RECORD_START);
@@ -136,7 +150,17 @@ class WebRtcAudioRecord {
         audioTimestamp = new AudioTimestamp();
       }
       while (keepAlive) {
-        int bytesRead = audioRecord.read(byteBuffer, byteBuffer.capacity());
+        int bytesRead = 0;
+
+        //if the mic is activated
+        if(activated && null != audioRecord) {
+          bytesRead = audioRecord.read(byteBuffer, byteBuffer.capacity());
+        } else {
+          bytesRead = emptyBytes.length;
+          byteBuffer.clear();
+          byteBuffer.put(emptyBytes);
+        }
+
         if (bytesRead == byteBuffer.capacity()) {
           if (microphoneMute) {
             byteBuffer.clear();
@@ -147,7 +171,7 @@ class WebRtcAudioRecord {
           // in case they've been unregistered after stopRecording() returned.
           if (keepAlive) {
             long captureTimeNs = 0;
-            if (Build.VERSION.SDK_INT >= 24) {
+            if (Build.VERSION.SDK_INT >= 24 && audioRecord != null) {
               if (audioRecord.getTimestamp(audioTimestamp, AudioTimestamp.TIMEBASE_MONOTONIC)
                   == AudioRecord.SUCCESS) {
                 captureTimeNs = audioTimestamp.nanoTime;
@@ -155,7 +179,7 @@ class WebRtcAudioRecord {
             }
             nativeDataIsRecorded(nativeAudioRecord, bytesRead, captureTimeNs);
           }
-          if (audioSamplesReadyCallback != null) {
+          if (null != audioRecord && audioSamplesReadyCallback != null) {
             // Copy the entire byte buffer array. The start of the byteBuffer is not necessarily
             // at index 0.
             byte[] data = Arrays.copyOfRange(byteBuffer.array(), byteBuffer.arrayOffset(),
@@ -189,6 +213,7 @@ class WebRtcAudioRecord {
     public void stopThread() {
       Logging.d(TAG, "stopThread");
       keepAlive = false;
+      activated = false;
     }
   }
 
@@ -310,6 +335,12 @@ class WebRtcAudioRecord {
     // verified that it does not increase the actual recording latency.
     int bufferSizeInBytes = Math.max(BUFFER_SIZE_FACTOR * minBufferSize, byteBuffer.capacity());
     Logging.d(TAG, "bufferSizeInBytes: " + bufferSizeInBytes);
+
+    if(!activated) {
+      //bypass the current state to make sure the micro is being deactivated
+      return framesPerBuffer;
+    }
+
     try {
       if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
         // Use the AudioRecord.Builder class on Android M (23) and above.
@@ -374,6 +405,14 @@ class WebRtcAudioRecord {
   @CalledByNative
   private boolean startRecording() {
     Logging.d(TAG, "startRecording");
+
+    if(!activated) {
+      //if the mic is deactivated completely, we start but it will be empty
+      audioThread = new AudioRecordThread("AudioRecordJavaThread", false);
+      audioThread.start();
+      return true;
+    }
+
     assertTrue(audioRecord != null);
     assertTrue(audioThread == null);
     try {
@@ -439,6 +478,7 @@ class WebRtcAudioRecord {
   }
 
   private void logMainParameters() {
+    if(null == audioRecord) return;
     Logging.d(TAG,
         "AudioRecord: "
             + "session ID: " + audioRecord.getAudioSessionId() + ", "
@@ -448,7 +488,7 @@ class WebRtcAudioRecord {
 
   @TargetApi(Build.VERSION_CODES.M)
   private void logMainParametersExtended() {
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+    if (Build.VERSION.SDK_INT >= 23 && null != audioRecord) {
       Logging.d(TAG,
           "AudioRecord: "
               // The frame count of the native AudioRecord buffer.
