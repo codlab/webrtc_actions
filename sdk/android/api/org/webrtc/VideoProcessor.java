@@ -68,9 +68,17 @@ public interface VideoProcessor extends CapturerObserver {
       return null;
     }
 
+    // exploratory fix from https://bugs.chromium.org/p/webrtc/issues/detail?id=11337
+    int scaledWidth = parameters.scaleWidth;
+    int scaledHeight = parameters.scaleHeight;
+
+    if(270 == frame.getRotation() || 90 == frame.getRotation()) scaledHeight = scaledHeight / 16 * 16;
+    else scaledWidth = scaledWidth / 16 * 16;
+    // ^---- making sure to have a surface which will match modulo 16 = 0 for the corresponding stride
+
     final VideoFrame.Buffer adaptedBuffer =
         frame.getBuffer().cropAndScale(parameters.cropX, parameters.cropY, parameters.cropWidth,
-            parameters.cropHeight, parameters.scaleWidth, parameters.scaleHeight);
+            parameters.cropHeight, scaledWidth, scaledHeight);
     return new VideoFrame(adaptedBuffer, frame.getRotation(), parameters.timestampNs);
   }
 }
