@@ -85,6 +85,7 @@ mkdir -p "${output}/src/build"
 mkdir -p "${output}/src/third_party/libvpx/source/libvpx/vpx/internal"
 mkdir -p "${output}/src/third_party/libvpx/source/libvpx/vpx/src"
 
+cp "${src}/build/buildflag.h" "${output}/src/build/"
 cp "${src}/build/build_config.h" "${output}/src/build/"
 cp "${src}/common_types.h" "${output}/src/"
 cp -r "${src}/dvc" "${output}/src/"
